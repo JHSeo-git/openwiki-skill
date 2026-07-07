@@ -20,7 +20,9 @@ OpenWiki의 제품 가치는 사실상 시스템 프롬프트(`src/agent/prompt.
 ```
 openwiki-skill/
 ├── README.md                  # 설치(npx skills add JHSeo-git/openwiki-skill), 사용법, attribution
-├── LICENSE                    # MIT + upstream 저작권 고지
+├── LICENSE                    # MIT (표준 GitHub 템플릿)
+├── UPSTREAM.md                # upstream pin(커밋 SHA) + 파일 매핑 + 동기화 절차
+├── CHANGELOG.md               # 릴리스/변경 기록 (upstream sync 반영 내역 포함)
 ├── SKILL.md                   # 코어 skill
 └── references/
     ├── init.md                # init 모드 규칙
@@ -93,6 +95,30 @@ git 레포가 아니면: 증거 수집을 생략하고 파일시스템만으로 
 
 skill 본문은 도구 중립 서술("파일 읽기/검색 도구", "지원 시 읽기전용 서브에이전트")을 유지하고, Claude Code 특화 내용은 괄호 힌트로만 덧붙인다. Codex는 `npx skills` 설치로 동일 파일을 소비한다.
 
+## Upstream 동기화
+
+이 skill은 upstream 스냅샷의 파생물이므로, upstream 변경을 추적할 최소 구조를 갖춘다. 발상은 openwiki 자신의 `.last-update.json` 패턴과 동일하다 — openwiki가 대상 레포의 git head를 추적하듯, 이 레포는 upstream의 git head를 추적한다.
+
+**UPSTREAM.md** (레포 루트, 파일 1개):
+
+- Pin: upstream 레포 URL, 파생 기준 커밋 SHA, 날짜. 최초 pin: `7d355379423172049308ba166ec2eff02c1c2e7d` (2026-07-06).
+- 파일 매핑 테이블 — 감시 대상을 좁혀 배관 코드 diff 노이즈를 걸러낸다:
+
+| upstream | skill 파일 |
+|---|---|
+| `src/agent/prompt.ts` | `SKILL.md`, `references/init.md`, `references/update.md`, `references/agents-md-section.md` |
+| `src/agent/utils.ts` (git evidence·메타데이터·no-op) | `SKILL.md` |
+| `src/constants.ts` (경로 규약) | `SKILL.md` |
+| `examples/*.yml` | `references/ci-examples.md` |
+
+- 동기화 절차 (에이전트가 요청받으면 그대로 수행):
+  1. `git -C ~/Projects/oss/openwiki fetch` (shallow clone이면 `--unshallow` 먼저) 후 pull.
+  2. `git log <pinned>..HEAD --oneline -- src/agent/prompt.ts src/agent/utils.ts src/constants.ts examples/` — 매핑된 파일의 변경만 확인.
+  3. 변경 없음 → no-op 보고. 변경 있음 → diff 리뷰 후 매핑에 따라 해당 skill 파일에 이식.
+  4. UPSTREAM.md pin 갱신 + CHANGELOG에 sync 내역 기록.
+
+감지는 순수 git diff라 LLM이 필요 없고, 이식만 에이전트 작업이다. 별도 sync skill이나 CI 자동화는 두지 않는다(최소 구조). 필요해지면 주간 cron으로 2번 명령을 돌려 변경 감지 시 issue를 여는 GitHub Actions를 나중에 추가할 수 있다.
+
 ## 검증 시나리오 (수동)
 
 1. 작은 실제 레포에 init 실행 → `openwiki/` 생성 확인: quickstart 진입점, 페이지 예산 준수, AGENTS.md 섹션 삽입, 메타데이터 기록.
@@ -101,4 +127,4 @@ skill 본문은 도구 중립 서술("파일 읽기/검색 도구", "지원 시 
 
 ## Attribution & 라이선스
 
-MIT. README에 워크플로우/프롬프트 규칙의 출처로 langchain-ai/openwiki를 명시하고, LICENSE에 upstream MIT 고지를 포함한다. 파생 내용: 프롬프트 규율 텍스트(재작성·압축), AGENTS.md 섹션 템플릿(verbatim), CI 예제(각색).
+LICENSE는 표준 GitHub MIT 템플릿 그대로 둔다. 출처 표기는 README의 attribution 섹션에서 langchain-ai/openwiki(MIT)를 명시하는 것으로 충분하다. 파생 내용: 프롬프트 규율 텍스트(재작성·압축), AGENTS.md 섹션 템플릿(verbatim), CI 예제(각색).
