@@ -1,104 +1,104 @@
-# OpenWiki Skill — Design
+# OpenWiki Skill — 설계
 
-Date: 2026-07-07
-Status: Approved in design review
+날짜: 2026-07-07
+상태: 설계 리뷰 승인됨
 
-## Goal
+## 목표
 
-Recreate the workflow of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) (MIT) as an agent skill for Claude Code / Codex.
+[langchain-ai/openwiki](https://github.com/langchain-ai/openwiki)(MIT)의 워크플로우를 Claude Code / Codex용 agent skill로 재구성한다.
 
-OpenWiki's product value lives almost entirely in its system prompt (`src/agent/prompt.ts`): discovery discipline, documentation quality rules, init/update workflows, git-evidence gathering, and metadata bookkeeping. The rest of the codebase is LLM plumbing (provider clients, deepagents runtime, SQLite checkpointing, stream parsing, credentials onboarding). This skill ports the rules into a SKILL.md package that the host agent executes with its own tools, and drops the plumbing entirely — no API keys, no separate runtime.
+OpenWiki의 제품 가치는 사실상 시스템 프롬프트(`src/agent/prompt.ts`) 하나에 모여 있다: 탐색 규율, 문서 품질 규칙, init/update 워크플로우, git 증거(evidence) 수집, 메타데이터 관리. 나머지 코드는 LLM 배관이다(provider 클라이언트, deepagents 런타임, SQLite 체크포인터, 스트림 파싱, 자격증명 온보딩). 이 skill은 규칙들을 SKILL.md 패키지로 이식해 호스트 에이전트가 자기 도구로 직접 실행하게 하고, 배관은 전부 제거한다 — API key 불필요, 별도 런타임 불필요.
 
-## Non-goals
+## 비목표
 
-- No standalone CLI, no direct LLM API calls, no provider/model configuration.
-- No interactive chat mode — the host agent is already interactive.
-- No automated test suite; verification is the manual scenarios below.
+- 독립 CLI 없음, LLM API 직접 호출 없음, provider/모델 설정 없음.
+- 대화형 chat 모드 없음 — 호스트 에이전트가 이미 대화형이다.
+- 자동화 테스트 없음. 검증은 아래 수동 시나리오로 한다.
 
-## Repository layout
+## 레포 구조
 
 ```
 openwiki-skill/
-├── README.md                  # install (npx skills add JHSeo-git/openwiki-skill), usage, attribution
-├── LICENSE                    # MIT + upstream copyright notice
-├── SKILL.md                   # core skill
+├── README.md                  # 설치(npx skills add JHSeo-git/openwiki-skill), 사용법, attribution
+├── LICENSE                    # MIT + upstream 저작권 고지
+├── SKILL.md                   # 코어 skill
 └── references/
-    ├── init.md                # init-mode rules
-    ├── update.md              # update-mode rules
-    ├── agents-md-section.md   # fixed AGENTS.md/CLAUDE.md template + insertion rules
-    └── ci-examples.md         # scheduled-update CI templates
+    ├── init.md                # init 모드 규칙
+    ├── update.md              # update 모드 규칙
+    ├── agents-md-section.md   # AGENTS.md/CLAUDE.md 고정 템플릿 + 삽입 규칙
+    └── ci-examples.md         # 주기적 update용 CI 템플릿
 ```
 
-## SKILL.md (core)
+## SKILL.md (코어)
 
-- Frontmatter: name `openwiki`; description is a short trigger phrase (generate or maintain repository wiki documentation in `openwiki/`).
-- Mode detection: `openwiki/quickstart.md` exists → update; otherwise → init. An explicit user request overrides. Edge case: `openwiki/` exists without `quickstart.md` → treat as init but preserve existing files.
+- Frontmatter: name은 `openwiki`, description은 짧은 트리거 문구(레포 위키 문서를 `openwiki/`에 생성/유지보수).
+- 모드 자동판단: `openwiki/quickstart.md` 있으면 → update, 없으면 → init. 사용자가 명시하면 그에 따른다. 엣지 케이스: `openwiki/`는 있는데 `quickstart.md`가 없으면 → init으로 취급하되 기존 파일은 보존한다.
 
-Shared discipline (ported from the upstream system prompt):
+공통 규율 (upstream 시스템 프롬프트에서 이식):
 
-- Targeted discovery only: repo tree, package/config files, READMEs, entrypoints, routing, schema files, representative files per domain. Never exhaustively read every file.
-- Read-only subagents (1-4) for parallel research when the harness supports them (Claude Code: Task tool); the main agent synthesizes and owns all writes.
-- Treat existing docs (README, docs/, runbooks, SKILL.md files) as primary sources; when docs conflict with source, call out the stale doc and prefer source evidence.
-- Never read or document secrets, credentials, or `.env` files.
-- Write only under `openwiki/`; the only exceptions are top-level `AGENTS.md` / `CLAUDE.md`, and only for the reference section.
-- Explain why code exists, not only what it contains. Docs target both humans and future agents.
-- Temporary plan file `openwiki/_plan.md` after discovery, deleted before finishing (a harness planning tool may substitute).
+- 표적 탐색만: 레포 트리, package/config 파일, README류, entrypoint, 라우팅, 스키마 파일, 도메인별 대표 파일. 전체 파일을 다 읽지 않는다.
+- 하네스가 지원하면 읽기전용 서브에이전트 1-4개로 병렬 리서치(Claude Code: Task tool). 종합과 모든 쓰기는 메인 에이전트가 담당한다.
+- 기존 문서(README, docs/, 런북, SKILL.md 파일)를 1차 소스로 취급. 문서와 소스가 충돌하면 stale 문서임을 지적하고 소스 증거를 우선한다.
+- secret, 자격증명, `.env` 파일은 읽지도 문서화하지도 않는다.
+- 쓰기는 `openwiki/` 아래에만. 유일한 예외는 루트 `AGENTS.md` / `CLAUDE.md`이며, 참조 섹션만 수정한다.
+- 코드가 왜 존재하는지를 설명한다. 무엇이 들어있는지만 나열하지 않는다. 문서 독자는 사람 + 미래 에이전트.
+- 탐색 후 임시 플랜 파일 `openwiki/_plan.md` 작성, 완료 전 삭제(하네스 플래닝 도구로 대체 가능).
 
-Git evidence (inline command block):
+Git 증거 (인라인 명령 블록):
 
 ```
 git status --short
 git rev-parse HEAD
-# update with prior gitHead:
+# 이전 gitHead가 있는 update:
 git log <lastHead>..HEAD --name-status --oneline
 #   fallback: git log --since <updatedAt> --name-status --oneline
 #   fallback: git log --max-count=20 --name-status --oneline
 git diff --name-status HEAD
 ```
 
-Non-git repositories: skip evidence and proceed from the filesystem only.
+git 레포가 아니면: 증거 수집을 생략하고 파일시스템만으로 진행한다.
 
-- Metadata, upstream-compatible: `openwiki/.last-update.json` — `{ updatedAt, command, gitHead, model }`. `model` is the host model id when known, else the harness name (`claude-code` / `codex`). Written only when wiki content actually changed.
-- No-op rule (update): if commits since `lastHead` touch only `openwiki/` (or nothing) and the worktree is clean → report "wiki is already current" and write nothing.
-- Routing: init → read `references/init.md`; update → read `references/update.md`; when touching root instruction files → `references/agents-md-section.md`; CI setup request → `references/ci-examples.md`.
+- 메타데이터, upstream 호환: `openwiki/.last-update.json` — `{ updatedAt, command, gitHead, model }`. `model`은 알 수 있으면 호스트 모델 id, 아니면 하네스 이름(`claude-code` / `codex`). 위키 콘텐츠가 실제로 바뀐 경우에만 기록한다.
+- no-op 규칙 (update): `lastHead` 이후 커밋이 `openwiki/`만 건드렸거나(또는 없고) 워크트리가 깨끗하면 → "wiki is already current" 보고 후 아무것도 쓰지 않는다.
+- 라우팅: init → `references/init.md` 읽기; update → `references/update.md`; 루트 지침 파일 수정 시 → `references/agents-md-section.md`; CI 설정 요청 → `references/ci-examples.md`.
 
 ## references/init.md
 
-- Inventory order: existing docs → entrypoints → package/config → major domain dirs → tests/evals → data/schema → operational scripts.
-- Use recent git history for "why": targeted `git log` / `git blame` / `git show` on high-signal files.
-- `quickstart.md` first (high-level overview + links to every section), then section directories (`architecture/`, `workflows/`, `domain/`, `operations/`, ... as fits the repo).
-- Budget: at most 8 pages on the initial run; small repos (≤ ~10 primary source files): quickstart plus 1-2 pages.
-- Quality rules: no thin pages or stub directories; one canonical home per concept; prefer headings inside broader pages before new directories; final tree review to merge/remove low-value pages; no persistent commit-hash lists.
+- 인벤토리 순서: 기존 문서 → entrypoint → package/config → 주요 도메인 디렉토리 → 테스트/eval → 데이터/스키마 → 운영 스크립트.
+- "왜"는 최근 git 히스토리로: 고신호 파일에 표적 `git log` / `git blame` / `git show`.
+- `quickstart.md` 먼저(고수준 개요 + 모든 섹션 링크), 이후 섹션 디렉토리(`architecture/`, `workflows/`, `domain/`, `operations/` 등 레포에 맞게).
+- 예산: 최초 실행은 최대 8페이지. 작은 레포(주요 소스 ~10개 이하)는 quickstart + 1-2페이지.
+- 품질 규칙: thin page/스텁 디렉토리 금지; 개념당 canonical 페이지 1곳; 새 디렉토리보다 넓은 페이지 내 heading 우선; 마무리 전 트리 리뷰로 저가치 페이지 병합/제거; 커밋 해시 목록을 문서에 남기지 않는다.
 
 ## references/update.md
 
-- Read `.last-update.json` → gather git evidence → build a docs impact plan (source change → docs affected → edit needed → why) → surgical edits only.
-- Diff budget: fewer than 5 changed source files → touch at most 1-2 wiki pages; more than 3 pages needs strong justification.
-- No formatting-only edits; don't refresh source maps or "things to watch" sections unless materially wrong; touch quickstart only when top-level behavior, setup, or navigation changed.
-- Check the root `AGENTS.md`/`CLAUDE.md` reference section for semantic staleness on every update run.
-- A no-op is a valid outcome.
+- `.last-update.json` 읽기 → git 증거 수집 → docs impact plan 작성(소스 변경 → 영향받는 문서 → 필요한 수정 → 이유) → 외과적 수정만.
+- diff budget: 변경된 소스 파일 5개 미만 → 위키 페이지 최대 1-2개 수정; 3페이지 초과 수정은 강한 근거 필요.
+- 포맷팅-only 수정 금지; source map이나 "주의사항" 섹션은 실질적으로 틀렸을 때만 갱신; quickstart는 최상위 동작/설정/내비게이션이 바뀐 경우에만.
+- 매 update 실행마다 루트 `AGENTS.md`/`CLAUDE.md` 참조 섹션의 의미적 stale 여부를 확인한다.
+- no-op도 유효한 결과다.
 
 ## references/agents-md-section.md
 
-- The exact upstream `## OpenWiki` section template, verbatim — keeps repos interoperable with the upstream openwiki CLI.
-- Rules: top-level files only; if both `AGENTS.md` and `CLAUDE.md` exist, insert in both; create `AGENTS.md` if neither exists; replace an existing section instead of duplicating; update only when semantically stale; never normalize unrelated formatting.
+- upstream `## OpenWiki` 섹션 템플릿을 그대로(verbatim) 사용 — upstream openwiki CLI로 만든 레포와 상호운용 유지.
+- 규칙: 루트 파일만 대상; `AGENTS.md`와 `CLAUDE.md`가 둘 다 있으면 양쪽에 삽입; 둘 다 없으면 `AGENTS.md` 생성; 기존 섹션은 중복 추가 대신 교체; 의미적으로 stale할 때만 갱신; 무관한 포맷팅은 건드리지 않는다.
 
 ## references/ci-examples.md
 
-- GitHub Actions cron workflow: checkout → install skill → run headless (`claude -p`) → open a PR when `openwiki/` changed. GitLab CI variant.
-- Honest requirement note: local interactive use needs no API key, but CI automation needs `ANTHROPIC_API_KEY` or a `claude setup-token` OAuth token.
-- Modeled on upstream `examples/openwiki-update.yml`.
+- GitHub Actions cron 워크플로우: checkout → skill 설치 → headless 실행(`claude -p`) → `openwiki/` 변경 시 PR 생성. GitLab CI 변형 포함.
+- 정직한 요구사항 고지: 로컬 대화형 사용은 API key 불필요하지만, CI 자동화는 `ANTHROPIC_API_KEY` 또는 `claude setup-token` OAuth 토큰이 필요하다.
+- upstream `examples/openwiki-update.yml`을 참고해 작성.
 
-## Harness compatibility
+## 하네스 호환성
 
-Skill text stays tool-neutral ("file read/search tools", "spawn read-only subagents if supported"), with Claude Code specifics as parenthetical hints. Codex consumes the same files via `npx skills` installation.
+skill 본문은 도구 중립 서술("파일 읽기/검색 도구", "지원 시 읽기전용 서브에이전트")을 유지하고, Claude Code 특화 내용은 괄호 힌트로만 덧붙인다. Codex는 `npx skills` 설치로 동일 파일을 소비한다.
 
-## Verification scenarios (manual)
+## 검증 시나리오 (수동)
 
-1. Init on a small real repo → `openwiki/` created: quickstart entrypoint, page budget respected, AGENTS.md section inserted, metadata written.
-2. Commit a source change, run update → surgical edit, impact plan honored, metadata refreshed.
-3. Run update with no changes → no-op reported, no file churn.
+1. 작은 실제 레포에 init 실행 → `openwiki/` 생성 확인: quickstart 진입점, 페이지 예산 준수, AGENTS.md 섹션 삽입, 메타데이터 기록.
+2. 소스 변경 커밋 후 update 실행 → 외과적 수정, impact plan 준수, 메타데이터 갱신.
+3. 변경 없이 update 실행 → no-op 보고, 파일 churn 없음.
 
-## Attribution & license
+## Attribution & 라이선스
 
-MIT. README credits langchain-ai/openwiki as the source of the workflow and prompt rules; LICENSE includes the upstream MIT notice. Derived content: prompt discipline text (rewritten and condensed), AGENTS.md section template (verbatim), CI examples (adapted).
+MIT. README에 워크플로우/프롬프트 규칙의 출처로 langchain-ai/openwiki를 명시하고, LICENSE에 upstream MIT 고지를 포함한다. 파생 내용: 프롬프트 규율 텍스트(재작성·압축), AGENTS.md 섹션 템플릿(verbatim), CI 예제(각색).
