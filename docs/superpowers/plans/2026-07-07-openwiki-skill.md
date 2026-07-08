@@ -90,7 +90,7 @@ git --no-pager log <gitHead>..HEAD --name-status --oneline
 git --no-pager log --since <updatedAt> --name-status --oneline
 ```
 
-**Early no-op exit** (update mode, only when the user gave no additional instruction — ported from upstream `getUpdateNoopStatus`): if the worktree is clean (ignoring `openwiki/.last-update.json` itself) and the commits since the recorded `gitHead` are absent or touch only `openwiki/` paths → report that the wiki is already current and stop here.
+**Early no-op exit** (update mode, only when the user gave no additional instruction — ported from upstream `getUpdateNoopStatus`): if the worktree is clean (ignoring `openwiki/.last-update.json` itself) and either HEAD equals the recorded `gitHead`, or every path changed since it lies under `openwiki/` (at least one such path — if HEAD moved but git reports no changed paths, do NOT treat it as a no-op) → report that the wiki is already current and stop here.
 
 Not a git repository → skip the commands and infer changes from filesystem timestamps, source inspection, and existing docs instead.
 
@@ -288,7 +288,7 @@ Run the `date` and `git` commands — never guess the timestamp or the head.
 
 > Update the existing OpenWiki documentation for this repository.
 >
-> Inspect openwiki/, identify recent source changes, and refresh only the documentation pages directly affected by those changes. Use the git evidence below when available. Keep edits surgical: do not rewrite accurate sections, do not update source maps or git evidence just to refresh them, and do not make formatting-only changes. If the wiki is already current, do not edit files. Update openwiki/.last-update.json only when OpenWiki content changes.
+> Inspect openwiki/, identify recent source changes, and refresh only the documentation pages directly affected by those changes. Use the git evidence below when available. Keep edits surgical: do not rewrite accurate sections, do not update source maps or git evidence just to refresh them, and do not make formatting-only changes. If the wiki is already current, do not edit files. **[adapted]** Update openwiki/.last-update.json yourself only when OpenWiki content changes (per Step 4).
 >
 > Last update metadata: *(contents of openwiki/.last-update.json, or "No previous OpenWiki update metadata was found.")*
 >
