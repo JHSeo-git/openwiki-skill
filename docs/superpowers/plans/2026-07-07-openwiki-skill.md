@@ -161,6 +161,8 @@ Root agent instruction files:
 - Only consider top-level /AGENTS.md and /CLAUDE.md for this step. Do not edit nested AGENTS.md or CLAUDE.md files.
 - If /AGENTS.md or /CLAUDE.md exists, add or update the OpenWiki reference section there. If both exist, ensure the same section is added to both (duplicated).
 - If neither exists, create top-level /AGENTS.md containing only the OpenWiki reference section.
+- **[adapted]** When creating that /AGENTS.md, also create a top-level /CLAUDE.md containing only the line `@AGENTS.md` — Claude Code reads only CLAUDE.md, and the `@` import is its documented way to load AGENTS.md.
+- **[adapted]** A /CLAUDE.md that imports AGENTS.md (an `@AGENTS.md` line) counts as having the section: treat it as semantically current and do not add a literal duplicate to it.
 - During update runs, inspect any existing OpenWiki reference section in /AGENTS.md and/or /CLAUDE.md and refresh it only if the section is missing or semantically stale. This check is required even when the wiki itself is otherwise current.
 - Preserve surrounding instructions in existing files. Replace/update an existing OpenWiki reference section instead of adding duplicates.
 - Do not edit /AGENTS.md or /CLAUDE.md only to normalize formatting, blank lines, wrapping, or punctuation if the existing OpenWiki section is already semantically correct.
