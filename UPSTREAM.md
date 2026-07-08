@@ -15,7 +15,7 @@ Only these upstream paths carry skill-relevant behavior. Changes anywhere else (
 | `src/constants.ts` (path conventions) | `skills/openwiki/SKILL.md` |
 | `examples/*.yml` | `skills/openwiki/references/automation.md` |
 
-`skills/openwiki-ask/SKILL.md` is original to this repo (no upstream counterpart).
+`skills/openwiki-ask/SKILL.md` is a loose analogue of upstream's `chat` command: its ground rules port the chat-mode instructions and shared security rules from `src/agent/prompt.ts` (not line-mapped); the wiki-first steps and citation rules are original to this repo.
 
 ## Sync procedure
 

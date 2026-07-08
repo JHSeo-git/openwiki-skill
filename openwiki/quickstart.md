@@ -12,7 +12,7 @@ The upstream project is a CLI that drives an LLM through provider APIs (API keys
 |---|---|
 | [`skills/openwiki/SKILL.md`](../skills/openwiki/SKILL.md) | The main skill: generate (init) or surgically refresh (update) a repo's `openwiki/` wiki. Mode auto-detection, then a 4-step runtime (below). |
 | [`skills/openwiki/references/automation.md`](../skills/openwiki/references/automation.md) | Scheduled updates: keyless options (subscription `claude -p` via cron, cloud routine), a scoped permission allowlist for headless runs, GitHub Actions / GitLab CI templates, a Codex headless note. |
-| [`skills/openwiki-ask/SKILL.md`](../skills/openwiki-ask/SKILL.md) | Companion skill: answer repo questions using the wiki as primary source, citing pages and their inline source references. Original to this repo (no upstream counterpart). |
+| [`skills/openwiki-ask/SKILL.md`](../skills/openwiki-ask/SKILL.md) | Companion skill: answer repo questions using the wiki as primary source, citing pages and their inline source references. Loose analogue of upstream's `chat` command (ground rules ported; steps original). |
 | [`UPSTREAM.md`](../UPSTREAM.md) | Canonical for upstream tracking: pinned upstream commit, file mapping, and the 4-step sync procedure. |
 | [`docs/superpowers/`](../docs/superpowers/) | Design spec (v2, Korean) and the implementation plan. The plan embeds byte-exact copies of every skill file plus the verification scripts that check them. |
 | [`CHANGELOG.md`](../CHANGELOG.md), [`LICENSE`](../LICENSE) | Release log (one bullet per change); MIT. |
