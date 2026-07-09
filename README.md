@@ -1,5 +1,7 @@
 # openwiki-skill
 
+[![skills.sh](https://skills.sh/b/JHSeo-git/openwiki-skill)](https://skills.sh/JHSeo-git/openwiki-skill)
+
 Agent skills that write, maintain, and answer from repository documentation in `openwiki/` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) for coding agents like Claude Code and Codex.
 
 The upstream CLI drives an LLM through provider APIs. This port drops that plumbing: your coding agent already is the LLM, with filesystem and git tools, so it executes the same workflow directly — the upstream system prompt is reproduced verbatim inside the skill, with harness differences marked `[adapted]`. No API key, no runtime, no configuration.
