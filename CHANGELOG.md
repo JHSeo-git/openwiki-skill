@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Upstream sync: bump pin `39493ef` → `a7c556f` (upstream v0.0.4). Only mapped-path change is the `OPENWIKI_VERSION` constant (0.0.2 → 0.0.4); the rest is CLI plumbing (non-TTY startup handling, tool-schema recovery middleware, stream-event simplification) with no skill counterpart — `src/agent/prompt.ts`, `src/agent/utils.ts`, and `examples/` unchanged, nothing to port.
+
 - `openwiki-ask`: add ground rules ported from upstream's `chat` mode — answering is read-only (no `openwiki/` edits unless explicitly asked; hand off to the `openwiki` skill for init/update) plus the shared secret-handling rules (never read or quote secrets or `.env` files); UPSTREAM.md and the wiki now record `openwiki-ask` as a loose analogue of upstream `chat` instead of "no upstream counterpart".
 
 - Upstream sync: bump pin `7d35537` → `39493ef` (upstream v0.0.2). Mapped-path changes since the pin are CLI-only (`OPENWIKI_VERSION` bump, `OPENROUTER_FALLBACK_MODEL_IDS` removal — provider plumbing with no skill counterpart); `src/agent/prompt.ts`, `src/agent/utils.ts`, and `examples/` are unchanged, so nothing to port.
