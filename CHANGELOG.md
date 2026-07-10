@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Upstream 0.1.0 port: re-port `openwiki` to upstream's code mode (agent no longer edits AGENTS.md/CLAUDE.md mid-run — a new Step 0 manages the upstream `<!-- OPENWIKI:START/END -->` marker snippet, migrating legacy sections; write boundary "only under openwiki/" per upstream docs-only backend; GH Actions auto-creation intentionally omitted in favor of automation.md); add `openwiki-personal` (upstream personal/local-wiki mode: `~/.openwiki/wiki`, verbatim synthesis discipline — canonical pages, confidence labels, email taxonomy — metadata without gitHead, wiki goal via `~/.openwiki/INSTRUCTIONS.md`, per-source runs in `references/sources.md` with evidence from host MCP/web-search/local tools instead of OAuth connectors); `openwiki-ask` now covers both wikis with upstream's wiki-first rules; UPSTREAM.md remapped for 0.1.0 and pin bumped `a7c556f` → `bf8f84a`.
+
 - README: add skills.sh badge.
 
 - Upstream sync: bump pin `39493ef` → `a7c556f` (upstream v0.0.4). Only mapped-path change is the `OPENWIKI_VERSION` constant (0.0.2 → 0.0.4); the rest is CLI plumbing (non-TTY startup handling, tool-schema recovery middleware, stream-event simplification) with no skill counterpart — `src/agent/prompt.ts`, `src/agent/utils.ts`, and `examples/` unchanged, nothing to port.

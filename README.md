@@ -2,7 +2,7 @@
 
 [![skills.sh](https://skills.sh/b/JHSeo-git/openwiki-skill)](https://skills.sh/JHSeo-git/openwiki-skill)
 
-Agent skills that write, maintain, and answer from repository documentation in `openwiki/` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) for coding agents like Claude Code and Codex.
+Agent skills that write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.1.0 for coding agents like Claude Code and Codex.
 
 The upstream CLI drives an LLM through provider APIs. This port drops that plumbing: your coding agent already is the LLM, with filesystem and git tools, so it executes the same workflow directly — the upstream system prompt is reproduced verbatim inside the skill, with harness differences marked `[adapted]`. No API key, no runtime, no configuration.
 
@@ -10,8 +10,9 @@ The upstream CLI drives an LLM through provider APIs. This port drops that plumb
 
 | Skill | What it does |
 |---|---|
-| [`openwiki`](skills/openwiki/SKILL.md) | Generate (init) or surgically refresh (update) the `openwiki/` wiki. Auto-detects the mode. |
-| [`openwiki-ask`](skills/openwiki-ask/SKILL.md) | Answer repository questions using the wiki as the primary source, citing pages. |
+| [`openwiki`](skills/openwiki/SKILL.md) | Generate (init) or surgically refresh (update) a repo's `openwiki/` wiki — upstream's code mode. Auto-detects the mode; manages the `AGENTS.md` marker snippet. |
+| [`openwiki-personal`](skills/openwiki-personal/SKILL.md) | Build or maintain the personal knowledge wiki at `~/.openwiki/wiki` — upstream's personal mode, with evidence from your own MCP servers, web search, and local repos instead of built-in OAuth connectors. |
+| [`openwiki-ask`](skills/openwiki-ask/SKILL.md) | Answer questions from either wiki, wiki-first, citing pages. |
 
 ## Install
 
@@ -19,13 +20,14 @@ The upstream CLI drives an LLM through provider APIs. This port drops that plumb
 npx skills add JHSeo-git/openwiki-skill
 ```
 
-Or manually: copy `skills/openwiki/` and `skills/openwiki-ask/` into your agent's skills directory, e.g. `~/.claude/skills/` for Claude Code.
+Or manually: copy `skills/openwiki/`, `skills/openwiki-personal/`, and `skills/openwiki-ask/` into your agent's skills directory, e.g. `~/.claude/skills/` for Claude Code.
 
 ## Use
 
-- "Generate documentation for this repository" → init: `openwiki/quickstart.md` entrypoint plus focused section pages, an `## OpenWiki` section in root `AGENTS.md`/`CLAUDE.md` (byte-compatible with the upstream CLI), and run metadata in `openwiki/.last-update.json`.
+- "Generate documentation for this repository" → init: `openwiki/quickstart.md` entrypoint plus focused section pages, the upstream marker snippet (`<!-- OPENWIKI:START/END -->`) in root `AGENTS.md`, and run metadata in `openwiki/.last-update.json`.
 - "Update the wiki" → surgical update driven by a docs impact plan and a soft diff budget; no-ops cleanly (early git check + content-hash check) when nothing relevant changed.
 - "How does X work?" → `openwiki-ask` answers from the wiki, citing pages and their inline source references.
+- "Set up my personal wiki" / "pull today's Slack into my wiki" → `openwiki-personal` initializes or source-updates `~/.openwiki/wiki`.
 
 Wikis produced here are interoperable with the upstream CLI: either tool can continue a wiki the other started.
 

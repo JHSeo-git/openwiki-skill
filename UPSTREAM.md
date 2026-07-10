@@ -2,24 +2,31 @@
 
 This skill is derived from [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) (MIT).
 
-- Pinned commit: `a7c556f1dd81b1680ce268fc8822694b8476f6b8` (2026-07-08, v0.0.4)
+- Pinned commit: `bf8f84aafaad892aaffd5509408470702edee909` (2026-07-10, v0.1.0)
 
 ## File mapping
 
-Only these upstream paths carry skill-relevant behavior. Changes anywhere else (CLI/UI, provider plumbing, credentials onboarding, tests) are intentionally out of scope.
+Only these upstream paths carry skill-relevant behavior. Changes anywhere else (CLI/UI, provider plumbing, credentials/OAuth onboarding, connector runtimes, schedulers, tests) are intentionally out of scope.
 
 | Upstream | This repo |
 |---|---|
-| `src/agent/prompt.ts` (system prompt, user prompts, AGENTS.md template) | `skills/openwiki/SKILL.md` — Step 3 and "The user prompt to act on" are line-mapped verbatim ports |
-| `src/agent/utils.ts` (git evidence, content snapshot, no-op detection, metadata) | `skills/openwiki/SKILL.md` — Steps 1, 2, 4 |
-| `src/constants.ts` (path conventions) | `skills/openwiki/SKILL.md` |
+| `src/agent/prompt.ts` — shared skeleton + `repository` output config | `skills/openwiki/SKILL.md` Step 3 and "The user prompt to act on" (line-mapped verbatim) |
+| `src/agent/prompt.ts` — `local-wiki` output config incl. `localWikiSynthesisInstruction` | `skills/openwiki-personal/SKILL.md` Step 3 and its user prompts (line-mapped verbatim) |
+| `src/agent/prompt.ts` — "Wiki-first question answering" | `skills/openwiki-ask/SKILL.md` (section-mapped) |
+| `src/agent/prompt.ts` — chat-mode instructions + shared security rules | `skills/openwiki-ask/SKILL.md` ground rules (loose, not line-mapped) |
+| `src/agent/utils.ts` — mode-aware git evidence, snapshot, no-op, metadata | `skills/openwiki/SKILL.md` Steps 1/2/4; `skills/openwiki-personal/SKILL.md` Steps 1/2/4 |
+| `src/code-mode.ts` — AGENTS.md marker snippet (workflow template is out of scope) | `skills/openwiki/SKILL.md` Step 0 |
+| `src/agent/docs-only-backend.ts` — repo-run write boundary | `skills/openwiki/SKILL.md` Step 3 security rules (as prompt discipline) |
+| `src/ingestion.ts` — `createSourceUpdateMessage` / `createSourceSynthesisPolicy` / `createConnectorSynthesisGuidance` | `skills/openwiki-personal/references/sources.md` |
+| `src/agent/types.ts` — `OpenWikiCommand`, `OpenWikiOutputMode`, `UpdateMetadata` | both wiki skills' Step 4 schemas |
+| `src/constants.ts` — path conventions (`openwiki`, `openwiki/.last-update.json`) | both wiki skills |
 | `examples/*.yml` | `skills/openwiki/references/automation.md` |
 
-`skills/openwiki-ask/SKILL.md` is a loose analogue of upstream's `chat` command: its ground rules port the chat-mode instructions and shared security rules from `src/agent/prompt.ts` (not line-mapped); the wiki-first steps and citation rules are original to this repo.
+Explicitly out of scope: `src/auth/*`, `src/connectors/*` (runtime; its prompt-bearing functions are mapped above via `ingestion.ts`), `src/schedules.ts`, `src/onboarding.ts` (its `INSTRUCTIONS.md` goal-file convention is mirrored by `openwiki-personal` Step 1), `src/openwiki-home.ts` (directory constants only informative), `src/credentials.tsx`, `src/cli.tsx`, `src/env.ts`, `src/diagnostics.ts`, `src/startup.ts`.
 
 ## Sync procedure
 
 1. Refresh a local upstream clone (this machine: `~/Projects/oss/openwiki`; if it is shallow, run `git fetch --unshallow` first, then `git pull`).
-2. List relevant changes: `git log <pinned>..HEAD --oneline -- src/agent/prompt.ts src/agent/utils.ts src/constants.ts examples/`
-3. No output → report that the skill is current with upstream, and stop. Output → review each commit's diff and port it. Because Step 3 of `skills/openwiki/SKILL.md` is a verbatim, line-mapped copy of the prompt, prompt changes apply as near-direct diffs; keep `[adapted]`/`[omitted]` markers intact.
+2. List relevant changes: `git log <pinned>..HEAD --oneline -- src/agent/prompt.ts src/agent/utils.ts src/agent/types.ts src/agent/docs-only-backend.ts src/code-mode.ts src/ingestion.ts src/constants.ts examples/`
+3. No output → report that the skills are current with upstream, and stop. Output → review each commit's diff and port it per the mapping above. The Step 3 sections of both wiki skills are verbatim, line-mapped copies — prompt changes apply as near-direct diffs; keep `[adapted]`/`[omitted]` markers intact.
 4. Update the pinned commit above and add a CHANGELOG entry describing what was ported.
