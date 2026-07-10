@@ -1,6 +1,6 @@
 # Automation — scheduled wiki updates
 
-Ways to keep `openwiki/` fresh automatically. Keyless (subscription-auth) options first — they match this port's "no API key" premise; CI needs a credential.
+Ways to keep `openwiki/` (and the personal wiki, §5) fresh automatically. Keyless (subscription-auth) options first — they match this port's "no API key" premise; CI needs a credential.
 
 ## 1. Keyless — subscription auth (recommended)
 
@@ -170,3 +170,14 @@ codex exec "Use the openwiki skill to update this repository's wiki."
 ```
 
 Check `codex exec --help` for your version's sandbox/approval flags; the run only needs read-only git plus writes under `openwiki/`, `AGENTS.md`, and `CLAUDE.md`.
+
+## 5. Personal wiki schedules (openwiki-personal)
+
+Upstream schedules personal ingestion with a macOS launchd job running `openwiki ingest all`. The keyless equivalent here is the same cron pattern as §1, pointed at the `openwiki-personal` skill — one entry per source keeps runs small (upstream also runs one source-specific update per connector):
+
+```
+7 8 * * 1-5 claude -p "Use the openwiki-personal skill to run a source update for slack." >> "$HOME/.openwiki/logs/ingestion.schedule.log" 2>&1
+17 8 * * 1-5 claude -p "Use the openwiki-personal skill to run a source update for gmail." >> "$HOME/.openwiki/logs/ingestion.schedule.log" 2>&1
+```
+
+Scoped permissions (user-level `~/.claude/settings.json`, since runs are not repo-rooted): allow `Write(~/.openwiki/**)` and `Edit(~/.openwiki/**)` plus the read-only commands from §2 (`find`, `shasum`/`sha256sum`, `date`, `rg`), and whatever read-only MCP tools the sources need. The log directory matches upstream's (`~/.openwiki/logs/`); create it once with `mkdir -p ~/.openwiki/logs`.
