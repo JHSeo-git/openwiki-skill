@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Upstream sync: bump pin `bf8f84a` → `326a307` (upstream v0.1.1). Ported: "Wiki brief" block in both modes' init/update user prompts (repo brief read from `openwiki/INSTRUCTIONS.md`, personal from `~/.openwiki/INSTRUCTIONS.md`; the personal skill's `[adapted]` goal injection is now upstream-official); two new root-agent rules treating `openwiki/INSTRUCTIONS.md` as user-authored control metadata (read, never rewrite in routine runs); Step 0 now manages the marker snippet in `/CLAUDE.md` as well (`CODE_MODE_AGENT_FILES`), keeping the `[adapted]` @AGENTS.md-import-counts-as-covered exception; automation.md GH Actions template mirrors upstream (SHA-pinned create-pull-request action, add-paths includes AGENTS.md/CLAUDE.md). Out of scope: NVIDIA NIM provider, GPT-5.6 model options, ChatGPT OAuth fix, ephemeral checkpoints, issue templates (CLI plumbing).
+
 ## 0.1.0 (2026-07-10)
 
 - Upstream 0.1.0 port: re-port `openwiki` to upstream's code mode (agent no longer edits AGENTS.md/CLAUDE.md mid-run — a new Step 0 manages the upstream `<!-- OPENWIKI:START/END -->` marker snippet, migrating legacy sections; write boundary "only under openwiki/" per upstream docs-only backend; GH Actions auto-creation intentionally omitted in favor of automation.md); add `openwiki-personal` (upstream personal/local-wiki mode: `~/.openwiki/wiki`, verbatim synthesis discipline — canonical pages, confidence labels, email taxonomy — metadata without gitHead, wiki goal via `~/.openwiki/INSTRUCTIONS.md`, per-source runs in `references/sources.md` with evidence from host MCP/web-search/local tools instead of OAuth connectors); `openwiki-ask` now covers both wikis with upstream's wiki-first rules; UPSTREAM.md remapped for 0.1.0 and pin bumped `a7c556f` → `bf8f84a`.

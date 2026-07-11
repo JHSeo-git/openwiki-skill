@@ -24,11 +24,11 @@ Upstream defaults to frontier coding models. Documentation quality depends on it
 
 Upstream performs this repository setup on every code-mode invocation, outside the agent. Do it at the start of every init/update run, before Step 1:
 
-1. Ensure `/AGENTS.md` carries the snippet below:
+1. Ensure `/AGENTS.md` and `/CLAUDE.md` each carry the snippet below (upstream `CODE_MODE_AGENT_FILES` — each file is created when missing and refreshed in place when already present):
    - Markers `<!-- OPENWIKI:START -->` / `<!-- OPENWIKI:END -->` present → replace everything between and including the markers with the snippet. Skip the write when the existing block is already identical.
    - **[adapted]** A legacy `## OpenWiki` section without markers (written by pre-0.1.0 versions of this skill) present → replace that section with the snippet instead of appending a duplicate (upstream never sees this state; this port migrates it).
-   - Neither present → append the snippet to the end of the file, separated by one blank line; if `/AGENTS.md` does not exist, create it containing only the snippet.
-2. **[adapted]** If `/CLAUDE.md` does not exist, create it containing only the line `@AGENTS.md` — Claude Code reads only CLAUDE.md, and the `@` import is its documented way to load AGENTS.md. A CLAUDE.md that imports AGENTS.md counts as covered; do not add a literal duplicate to it.
+   - Neither present → append the snippet to the end of the file, separated by one blank line; if the file does not exist, create it containing only the snippet.
+2. **[adapted]** Exception for `/CLAUDE.md`: if it imports AGENTS.md (an `@AGENTS.md` line) and `/AGENTS.md` carries the snippet, it counts as covered — do not append a duplicate (Claude Code loads AGENTS.md through the import; upstream has no import concept).
 3. **[omitted]** Upstream also writes `.github/workflows/openwiki-update.yml` (a scheduled `openwiki code --update --print` workflow that needs a provider API key). This keyless port does not create CI files unasked — for scheduled updates read `references/automation.md`.
 
 The snippet — keep byte-identical to upstream `createCodeModeAgentsSnippet()`:
@@ -49,7 +49,7 @@ Only Step 0 may touch `/AGENTS.md` and `/CLAUDE.md`. The documentation run itsel
 
 ## Step 1 — Collect git evidence (before any write; all git read-only; use `git --no-pager`)
 
-Read `openwiki/.last-update.json` if it exists to recover `gitHead` and `updatedAt`. Then run:
+Read `openwiki/.last-update.json` if it exists to recover `gitHead` and `updatedAt`. Read `openwiki/INSTRUCTIONS.md` if it exists — the user-authored OpenWiki brief for this repository, injected as "Wiki brief" in the user prompt (ported from upstream `readRepositoryWikiInstructions`; absent or empty → "(not provided)"). Then run:
 
 Always:
 
@@ -152,8 +152,10 @@ Root agent instruction files:
 
 - Do not create or update repository /AGENTS.md or /CLAUDE.md files during normal code wiki runs.
 - Keep generated wiki content under the repository /openwiki directory.
+- /openwiki/INSTRUCTIONS.md is the shared, user-authored OpenWiki brief for this repository. Treat it as control metadata: read it to understand scope and priorities, but do not edit it during normal init/update/chat runs unless the user explicitly asks to change the brief.
+- Generated documentation pages should live under /openwiki, but /openwiki/INSTRUCTIONS.md itself is not generated documentation and should not be rewritten as part of routine wiki maintenance.
 - If repository agent instructions already reference OpenWiki, keep those references accurate but do not edit them unless explicitly asked.
-- **[adapted]** The OpenWiki reference snippet in /AGENTS.md is managed by Step 0 of this skill (upstream: CLI repository setup), never by the documentation run.
+- **[adapted]** The OpenWiki reference snippets in /AGENTS.md and /CLAUDE.md are managed by Step 0 of this skill (upstream: CLI repository setup), never by the documentation run.
 
 **[omitted]** (Upstream places the "OpenWiki CLI reference" here — there is no CLI in this port.)
 
@@ -260,6 +262,8 @@ Run the `date` and `git` commands — never guess the timestamp or the head.
 >
 > Start with openwiki/quickstart.md as the entrypoint. Then create section directories and pages that explain the subject in a way that is useful to both humans and future agents.
 >
+> Wiki brief: *(contents of openwiki/INSTRUCTIONS.md, or "(not provided)")*
+>
 > Git context: *(the Step 1 output)*
 
 **update:**
@@ -269,6 +273,8 @@ Run the `date` and `git` commands — never guess the timestamp or the head.
 > Inspect openwiki/, identify recent source changes or newly ingested connector evidence, and refresh only the documentation pages directly affected by those changes. Use the git evidence below when available. Keep edits surgical: do not rewrite accurate sections, do not update source maps or git evidence just to refresh them, and do not make formatting-only changes. If the wiki is already current, do not edit files. **[adapted]** Update openwiki/.last-update.json yourself only when OpenWiki content changes (per Step 4).
 >
 > Last update metadata: *(contents of openwiki/.last-update.json, or "No previous OpenWiki update metadata was found.")*
+>
+> Wiki brief: *(contents of openwiki/INSTRUCTIONS.md, or "(not provided)")*
 >
 > Git change summary: *(the Step 1 output)*
 

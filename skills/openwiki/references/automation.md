@@ -108,9 +108,12 @@ jobs:
           # CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
       - name: Create OpenWiki update pull request
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7
         with:
-          add-paths: openwiki
+          add-paths: |
+            openwiki
+            AGENTS.md
+            CLAUDE.md
           branch: openwiki/update
           commit-message: "docs: update OpenWiki"
           title: "docs: update OpenWiki"

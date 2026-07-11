@@ -25,7 +25,7 @@ Upstream's CLI wraps one LLM agent in runtime bookkeeping (`src/agent/utils.ts`)
 
 `openwiki` (code mode), 5 steps:
 
-0. **Code setup** — idempotently maintain the `<!-- OPENWIKI:START/END -->` snippet in `/AGENTS.md` (ported from `src/code-mode.ts`; legacy marker-less sections are migrated, upstream's GH Actions workflow generation is deliberately omitted) and the `@AGENTS.md`-importing `/CLAUDE.md`.
+0. **Code setup** — idempotently maintain the `<!-- OPENWIKI:START/END -->` snippet in `/AGENTS.md` and `/CLAUDE.md` (ported from `src/code-mode.ts`; legacy marker-less sections are migrated, an `@AGENTS.md`-importing CLAUDE.md counts as covered, upstream's GH Actions workflow generation is deliberately omitted).
 1. **Git evidence** — `git --no-pager status/rev-parse/log/diff` with mode-dependent history windows, plus an *early no-op exit* (ported from `getUpdateNoopStatus`): clean worktree + only-`openwiki/` commits since the recorded head → report "already current" and stop.
 2. **Content snapshot** — hash the `openwiki/` tree (excluding metadata) before working (ported from `createOpenWikiContentSnapshot`).
 3. **The system prompt** — upstream `src/agent/prompt.ts` with the `repository` output configuration inlined, reproduced *verbatim*; harness differences marked `**[adapted]**`, content owned by the other skills marked `**[omitted]**`.

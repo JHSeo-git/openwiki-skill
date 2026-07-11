@@ -28,7 +28,7 @@ Upstream defaults to frontier coding models. Documentation quality depends on it
 **[adapted]** Local-wiki runs use no git evidence — upstream substitutes a fixed note for the git summary (ported into the user prompt below), and its update no-op precheck is repository-mode only, so there is no early no-op exit here. Instead:
 
 - Read `~/.openwiki/wiki/.last-update.json` if it exists (`updatedAt`, `command`, `model` — this mode records no `gitHead`).
-- Read `~/.openwiki/INSTRUCTIONS.md` if it exists — the user's standing wiki goal, injected as "User wiki goal" below.
+- Read `~/.openwiki/INSTRUCTIONS.md` if it exists — the user's standing wiki goal, injected as "Wiki brief" below (upstream reads it into every run's user prompt; absent or empty → "(not provided)").
 - init with no `~/.openwiki/INSTRUCTIONS.md`: ask the user what the wiki should track and why (goals, topics, sources to watch), then write their answer to `~/.openwiki/INSTRUCTIONS.md` (**[adapted]** minimal stand-in for upstream's onboarding, which collects the same goal into that file).
 
 ## Step 2 — Snapshot the wiki (before the work; ported from upstream `createOpenWikiContentSnapshot`)
@@ -280,9 +280,9 @@ Run the `date` command — never guess the timestamp.
 >
 > Start with /quickstart.md as the entrypoint. Then create section directories and pages that explain the subject in a way that is useful to both humans and future agents.
 >
-> Git context: **[adapted]** Local wiki mode: source evidence comes from your own tools and the user's instructions (upstream: raw data paths and OpenWiki connector tools). Git repository diff context is not used for this run.
+> Wiki brief: *(contents of ~/.openwiki/INSTRUCTIONS.md, or "(not provided)")*
 >
-> **[adapted]** User wiki goal: *(contents of ~/.openwiki/INSTRUCTIONS.md, or "(not provided)")*
+> Git context: **[adapted]** Local wiki mode: source evidence comes from your own tools and the user's instructions (upstream: raw data paths and OpenWiki connector tools). Git repository diff context is not used for this run.
 
 **update:**
 
@@ -292,9 +292,9 @@ Run the `date` command — never guess the timestamp.
 >
 > Last update metadata: *(contents of ~/.openwiki/wiki/.last-update.json, or "No previous OpenWiki update metadata was found.")*
 >
-> Git change summary: **[adapted]** Local wiki mode: source evidence comes from your own tools and the user's instructions (upstream: raw data paths and OpenWiki connector tools). Git repository diff context is not used for this run.
+> Wiki brief: *(contents of ~/.openwiki/INSTRUCTIONS.md, or "(not provided)")*
 >
-> **[adapted]** User wiki goal: *(contents of ~/.openwiki/INSTRUCTIONS.md, or "(not provided)")*
+> Git change summary: **[adapted]** Local wiki mode: source evidence comes from your own tools and the user's instructions (upstream: raw data paths and OpenWiki connector tools). Git repository diff context is not used for this run.
 
 If the user gave an additional instruction, append:
 
