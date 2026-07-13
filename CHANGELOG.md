@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- README: catch up to the v0.1.1 sync — upstream port version 0.1.0 → 0.1.1, marker snippet now covers root `CLAUDE.md` as well as `AGENTS.md`, and document the `INSTRUCTIONS.md` "Wiki brief" in Use.
+
+- Skills: bump stale upstream-version references (v0.1.0 → v0.1.1) in the `openwiki` and `openwiki-personal` SKILL.md intros and Step 3 reproduction notes, missed in the 0.1.1 sync.
+
 ## 0.1.1 (2026-07-11)
 
 - Upstream sync: bump pin `bf8f84a` → `326a307` (upstream v0.1.1). Ported: "Wiki brief" block in both modes' init/update user prompts (repo brief read from `openwiki/INSTRUCTIONS.md`, personal from `~/.openwiki/INSTRUCTIONS.md`; the personal skill's `[adapted]` goal injection is now upstream-official); two new root-agent rules treating `openwiki/INSTRUCTIONS.md` as user-authored control metadata (read, never rewrite in routine runs); Step 0 now manages the marker snippet in `/CLAUDE.md` as well (`CODE_MODE_AGENT_FILES`), keeping the `[adapted]` @AGENTS.md-import-counts-as-covered exception; automation.md GH Actions template mirrors upstream (SHA-pinned create-pull-request action, add-paths includes AGENTS.md/CLAUDE.md). Out of scope: NVIDIA NIM provider, GPT-5.6 model options, ChatGPT OAuth fix, ephemeral checkpoints, issue templates (CLI plumbing).
