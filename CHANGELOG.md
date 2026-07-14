@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.2 (2026-07-14)
 
 - `openwiki-personal`: add `references/connectors.md` — guidance-only map of host-tool stand-ins per upstream connector, recording upstream's actual mechanism per source (direct OAuth APIs for Slack/Gmail/X, Tavily for web-search, public HN APIs, Notion MCP, local git-repo reads) alongside the suggested host tool (built-in web search/fetch, installed `git`, a local X CLI such as `birdclaw`, MCP servers or trusted CLIs for the rest); also records port-only sources — GeekNews via its official Atom feed (`news.hada.io/rss/news`; the site has no public JSON API); linked from the skill intro and README.
 
