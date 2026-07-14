@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `openwiki-personal`: expand the `slack` row in `references/connectors.md` into a researched guide — custom internal app + xoxp user token route with the exact history scopes, why the May 2025 rate-limit reduction does not apply to internal custom apps, the official CLI's `slack api` passthrough, warnings against browser-session-token tools on managed workspaces, and the synthesis-not-mirror rule from Slack's API terms; document connector credential management in `~/.openwiki/.env` (upstream's own credential file, `src/env.ts` — upstream-style `OPENWIKI_*` names, loaded per command via `set -a; . ~/.openwiki/.env; set +a`, never read by the agent); add a gitignored `.internal/` directory for repo-internal research notes.
+
 ## 0.1.2 (2026-07-14)
 
 - `openwiki-personal`: add `references/connectors.md` — guidance-only map of host-tool stand-ins per upstream connector, recording upstream's actual mechanism per source (direct OAuth APIs for Slack/Gmail/X, Tavily for web-search, public HN APIs, Notion MCP, local git-repo reads) alongside the suggested host tool (built-in web search/fetch, installed `git`, a local X CLI such as `birdclaw`, MCP servers or trusted CLIs for the rest); also records port-only sources — GeekNews via its official Atom feed (`news.hada.io/rss/news`; the site has no public JSON API); linked from the skill intro and README.
