@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `openwiki-personal`: connectors.md Slack note — add the `search:read` scope family (matching upstream's `user_scope` in `src/auth/providers.ts`) for definitive self-message search via `search.messages`, with the bounded-history fallback behavior noted; note that Slack CLI login/service tokens (`xoxe.xoxp-…`) are app-management-only and cannot read conversations; tidy the guide — one connector table (GeekNews folded in as a port-only row), research-note phrasing dropped.
+
 - `openwiki-personal`: expand the `slack` row in `references/connectors.md` into a researched guide — custom internal app + xoxp user token route with the exact history scopes, why the May 2025 rate-limit reduction does not apply to internal custom apps, the official CLI's `slack api` passthrough, warnings against browser-session-token tools on managed workspaces, and the synthesis-not-mirror rule from Slack's API terms; document connector credential management in `~/.openwiki/.env` (upstream's own credential file, `src/env.ts` — upstream-style `OPENWIKI_*` names, loaded per command via `set -a; . ~/.openwiki/.env; set +a`, never read by the agent); add a gitignored `.internal/` directory for repo-internal research notes.
 
 ## 0.1.2 (2026-07-14)

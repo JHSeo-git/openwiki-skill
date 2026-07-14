@@ -2,8 +2,6 @@
 
 Upstream OpenWiki feeds the personal wiki through built-in connectors (`src/connectors/sources/*`) that dump raw data under `~/.openwiki/connectors/`. This port has no connector runtime: **the host agent's own tools are the connectors.** This page is guidance only — it is not part of the ported prompt and nothing here is required. Pick the tool you already have, name the source in `~/.openwiki/INSTRUCTIONS.md` (the wiki brief), and the per-source synthesis rules in [`sources.md`](sources.md) take over.
 
-Per upstream connector (registry order), what upstream actually uses and the suggested host-tool stand-in:
-
 | Connector | Upstream implementation | Host-tool equivalent |
 |---|---|---|
 | `git-repo` | Local repository reads | Locally installed `git` plus the agent's file tools. Name the repo paths in the wiki brief. |
@@ -13,23 +11,19 @@ Per upstream connector (registry order), what upstream actually uses and the sug
 | `web-search` | Tavily search API (API key) | The agent's built-in web search and fetch (Claude Code: WebSearch/WebFetch; Codex: its web-search tool when enabled). No setup — list sites or feeds to watch in the wiki brief. |
 | `hackernews` | Public Algolia / Firebase HN APIs (no auth) | The agent's web fetch against the same public APIs (`hn.algolia.com`, `hacker-news.firebaseio.com`). |
 | `slack` | Slack Web API (`slack.com/api`), OAuth | A custom internal Slack app with an xoxp user token, called via `curl` or the official Slack CLI's `slack api` passthrough; or Slack's official MCP server. See the Slack note below. |
+| `geeknews` | — (port-only, no upstream counterpart) | The agent's web fetch of the official Atom feed `https://news.hada.io/rss/news` (no auth; no public JSON API — the site's bot integrations are push webhooks). Item pages at `news.hada.io/topic?id=...`; synthesize per the `hackernews` guidance in [`sources.md`](sources.md). |
 
-Slack note (researched 2026-07-14 against Slack's primary docs):
+Anything else upstream has no connector for: an MCP server the user has connected for that service, or direct dictation in chat.
+
+Slack note:
 
 - Scopes for a user token: `channels:history`, `groups:history`, `im:history`, `mpim:history` (+ the matching `*:read` scopes for listing) cover public/private channels, group DMs, and your own 1:1 DMs via `conversations.list`/`users.conversations` + `conversations.history`/`conversations.replies`.
+- Add the `search:read` family (`search:read`, `search:read.files`, `search:read.im`, `search:read.mpim`, `search:read.private`, `search:read.public`, `search:read.users`) to enable definitive self-message search via `search.messages` — upstream's connector requests exactly these on top of the history/read set (`src/auth/providers.ts` `user_scope`), and falls back to bounded `conversations.history` scans with a warning when they are missing.
 - Rate limits: the May 2025 reduction (1 request/min, 15 messages/request on history/replies) applies only to newly created, commercially distributed non-Marketplace apps — internal custom apps keep Tier 3 (50+/min, up to 999 messages/request), so a daily ingestion window is minutes, not hours.
-- The official Slack CLI is app-dev tooling; it has no message-export command, but `slack api <method>` is a documented generic escape hatch.
+- The official Slack CLI is app-dev tooling; it has no message-export command, but `slack api <method>` is a documented generic escape hatch. Its own login/service tokens (`xoxe.xoxp-…`) carry app-management scopes only and cannot read conversations.
 - Store the token as e.g. `OPENWIKI_SLACK_USER_TOKEN` in `~/.openwiki/.env` and load it per command — see "Credentials" below.
 - Avoid browser-session-token tools (`xoxc` + `d` cookie, e.g. slackdump) on managed workspaces: Slack's API terms prohibit circumventing security controls, and such tools themselves warn that admins may be alerted. Employer workspaces: admin app approval and company policy come before anything Slack's ToS allows.
 - Slack's API terms also restrict bulk export and LLM-training use of API data — keep the wiki a synthesis layer (notes + minimal quotes), never a full mirror. This matches the source-page discipline in `sources.md`.
-
-Port-only sources (no upstream counterpart) — same pattern, evidence via host tools:
-
-| Source | Host-tool equivalent |
-|---|---|
-| `geeknews` (news.hada.io — Korean HN-style dev/tech news) | The agent's web fetch of the official Atom feed `https://news.hada.io/rss/news` (no auth; there is no public JSON API — the site's bot integrations are push webhooks, not a pull API). Item pages live at `news.hada.io/topic?id=...`; follow the `hackernews` synthesis guidance in [`sources.md`](sources.md). |
-
-Anything else upstream has no connector for: an MCP server the user has connected for that service, or direct dictation in chat.
 
 ## Credentials — `~/.openwiki/.env`
 
