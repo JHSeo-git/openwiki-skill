@@ -2,7 +2,7 @@
 
 This skill is derived from [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) (MIT).
 
-- Pinned commit: `326a307203345128a60b92a356978c46e2992df3` (2026-07-11, v0.1.1)
+- Pinned commit: `7c084f9f6f8032243fd3dfd544969c279416b5cb` (2026-07-14, v0.1.2 plus one out-of-scope env fix)
 
 ## File mapping
 

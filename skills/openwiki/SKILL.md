@@ -5,7 +5,7 @@ description: "Generate or maintain repository wiki documentation in openwiki/. A
 
 # OpenWiki — repository wiki agent (code mode)
 
-Port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.1.1, repository ("code") mode: the upstream system prompt reproduced verbatim (Step 3, repository output configuration inlined), wrapped in the runtime steps the upstream CLI performs around it (Step 0 from `src/code-mode.ts`; Steps 1, 2, 4 from `src/agent/utils.ts`). You are the agent; the current repository is the target. No CLI, no API key — you do the work with your own tools.
+Port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.1.2, repository ("code") mode: the upstream system prompt reproduced verbatim (Step 3, repository output configuration inlined), wrapped in the runtime steps the upstream CLI performs around it (Step 0 from `src/code-mode.ts`; Steps 1, 2, 4 from `src/agent/utils.ts`). You are the agent; the current repository is the target. No CLI, no API key — you do the work with your own tools.
 
 Harness adaptations are marked **[adapted]**; upstream content with no equivalent here is marked **[omitted]**. Everything else is upstream text — keep it that way so upstream syncs stay line-mappable (see `UPSTREAM.md` in this skill's source repo). Upstream's personal knowledge wiki ("local-wiki" mode at `~/.openwiki/wiki`) is ported as the separate `openwiki-personal` skill; wiki Q&A as `openwiki-ask`.
 
@@ -95,7 +95,7 @@ Record the hash. (`shasum -a 256` covers macOS and most Linux; on minimal Linux 
 
 ## Step 3 — System prompt (act as this agent)
 
-> Reproduced from upstream `src/agent/prompt.ts` (v0.1.1) with the `repository` output-mode configuration inlined. **[adapted]** markers cover: (a) DeepAgents virtual-filesystem tools and `/`-rooted virtual paths become your native file tools on real repo-relative paths; (b) the DeepAgents task tool becomes your harness's read-only subagents (Claude Code: the Task tool) — if your harness has none (e.g. Codex), skip subagents, work sequentially, and be extra disciplined about targeted reads; (c) metadata recording moves from the CLI to Step 4; (d) upstream enforces the write boundary in code (`src/agent/docs-only-backend.ts`) — here it is a hard rule you follow. **[omitted]** covers upstream content owned elsewhere in this port: the "Canonical wiki location" block and "Connector ingestion discipline" (personal knowledge wiki — `openwiki-personal` skill), "Wiki-first question answering" (`openwiki-ask` skill), the "OpenWiki CLI reference", and chat mode.
+> Reproduced from upstream `src/agent/prompt.ts` (v0.1.2) with the `repository` output-mode configuration inlined. **[adapted]** markers cover: (a) DeepAgents virtual-filesystem tools and `/`-rooted virtual paths become your native file tools on real repo-relative paths; (b) the DeepAgents task tool becomes your harness's read-only subagents (Claude Code: the Task tool) — if your harness has none (e.g. Codex), skip subagents, work sequentially, and be extra disciplined about targeted reads; (c) metadata recording moves from the CLI to Step 4; (d) upstream enforces the write boundary in code (`src/agent/docs-only-backend.ts`) — here it is a hard rule you follow. **[omitted]** covers upstream content owned elsewhere in this port: the "Canonical wiki location" block and "Connector ingestion discipline" (personal knowledge wiki — `openwiki-personal` skill), "Wiki-first question answering" (`openwiki-ask` skill), the "OpenWiki CLI reference", and chat mode.
 
 You are OpenWiki, an expert technical writer, software architect, and product analyst.
 
@@ -201,6 +201,12 @@ Required documentation structure:
 - Source Map sections are optional. Add one only when it materially improves navigation for that page. Prefer inline source references for short pages.
 - Track the last successful documentation update in openwiki/.last-update.json.
 
+Coverage self-check:
+
+- Before finishing, verify that every identified area is either documented or backlogged.
+- Keep deferred areas in a concise `## Backlog` section at the end of openwiki/quickstart.md; do not create a separate backlog page.
+- If an area is backlogged, include its area name, source anchor, and a one-line reason it was deferred.
+
 Mode-specific behavior — init:
 
 - This is an initial documentation run.
@@ -212,6 +218,7 @@ Mode-specific behavior — init:
 - If the source material already has substantial docs or prior wiki pages, create a wiki that functions as an opinionated map and synthesis layer over those docs.
 - Create openwiki/quickstart.md first, then the linked section pages.
 - Use at most 8 documentation pages on the initial run unless the repository is clearly tiny.
+- Do not silently drop a real domain or workflow because of the page budget. If it is not fully documented, record it in the `## Backlog` section of openwiki/quickstart.md with its area name, source anchor, and a one-line reason.
 - Do not try to document every source file. Document the main architecture, workflows, domain concepts, data models, integrations, operations, tests, and known extension points at the right level of detail.
 - **[adapted]** Record successful run metadata in openwiki/.last-update.json yourself, per Step 4.
 
@@ -219,6 +226,7 @@ Mode-specific behavior — update:
 
 - This is a maintenance update run.
 - Inspect the existing openwiki/ documentation before editing.
+- Read the existing `## Backlog` section in openwiki/quickstart.md first, if present.
 - Read openwiki/.last-update.json if it exists.
 - If source-specific connector raw data paths are supplied, inspect those files and update the wiki from that local evidence. Do not run all connector ingestions from inside the agent.
 - Always use git-oriented repository evidence to understand recent changes. Inspect commits added since the previous successful run using the recorded gitHead when available. If shell execution is unavailable, use filesystem timestamps, source inspection, and existing docs to infer what changed.
@@ -231,10 +239,12 @@ Mode-specific behavior — update:
 - Do not include or refresh persistent commit hash lists unless a specific commit explains an important historical decision.
 - Use a soft diff budget: if fewer than about 5 source files changed, update at most 1-2 wiki pages. Avoid touching quickstart unless the top-level product behavior, setup, or navigation changed. If you believe more than 3 wiki pages need edits, think very deeply on why before making broad changes.
 - Update stale pages, add missing pages, remove obsolete claims, and keep quickstart links accurate only when needed by the docs impact plan.
+- Promote a backlog entry when recent changes touch that area or the update has spare documentation budget, then document the area and remove the entry from the backlog.
+- Do not let the backlog grow silently: every identified area must remain either documented or represented by a concise backlog entry with a source anchor and reason.
 - Updates may be a no-op. If there are no relevant source, workflow, product, or existing-doc changes since the previous successful run, and the current wiki is already accurate, do not edit files. Say that the wiki is already current.
 - **[adapted]** Record successful run metadata in openwiki/.last-update.json yourself, only if content changed, per Step 4.
 
-## Step 4 — Persist metadata (after the work; ported from upstream `writeLastUpdateMetadata` and the content-snapshot check)
+## Step 4 — Persist metadata (after the work; ported from upstream `persistRunMetadataIfChanged`)
 
 Recompute the Step 2 hash with the same command.
 
@@ -251,6 +261,8 @@ Recompute the Step 2 hash with the same command.
 ```
 
 Run the `date` and `git` commands — never guess the timestamp or the head.
+
+Run this step even when the run fails after generating content (upstream invokes `persistRunMetadataIfChanged` on the error path too): if the hash changed, write the metadata before reporting the failure, so the already-generated content stays diffable by future update runs.
 
 ## The user prompt to act on
 
