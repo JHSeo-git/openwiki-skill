@@ -11,7 +11,7 @@ The upstream CLI drives an LLM through provider APIs. This port drops that plumb
 | Skill | What it does |
 |---|---|
 | [`openwiki`](skills/openwiki/SKILL.md) | Generate (init) or surgically refresh (update) a repo's `openwiki/` wiki — upstream's code mode. Auto-detects the mode; manages the marker snippet in root `AGENTS.md` and `CLAUDE.md`. |
-| [`openwiki-personal`](skills/openwiki-personal/SKILL.md) | Build or maintain the personal knowledge wiki at `~/.openwiki/wiki` — upstream's personal mode, with evidence from your own MCP servers, web search, and local repos instead of built-in OAuth connectors. |
+| [`openwiki-personal`](skills/openwiki-personal/SKILL.md) | Build or maintain the personal knowledge wiki at `~/.openwiki/wiki` — upstream's personal mode, with evidence from your own MCP servers, web search, and local repos instead of built-in OAuth connectors. Per-source wiring guidance: [`references/connectors.md`](skills/openwiki-personal/references/connectors.md). |
 | [`openwiki-ask`](skills/openwiki-ask/SKILL.md) | Answer questions from either wiki, wiki-first, citing pages. |
 
 ## Install

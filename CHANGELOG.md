@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `openwiki-personal`: add `references/connectors.md` — guidance-only map of host-tool stand-ins per upstream connector, recording upstream's actual mechanism per source (direct OAuth APIs for Slack/Gmail/X, Tavily for web-search, public HN APIs, Notion MCP, local git-repo reads) alongside the suggested host tool (built-in web search/fetch, installed `git`, a local X CLI such as `birdclaw`, MCP servers or trusted CLIs for the rest); also records port-only sources — GeekNews via its official Atom feed (`news.hada.io/rss/news`; the site has no public JSON API); linked from the skill intro and README.
+
 - Upstream sync: bump pin `326a307` → `7c084f9` (upstream v0.1.2). Ported: deferred-documentation-area tracking in both wiki skills' Step 3 (new "Coverage self-check" block, init records undocumented areas in a quickstart `## Backlog` section, update reads/promotes/prunes backlog entries); Step 4 now runs even when a run fails after generating content (`persistRunMetadataIfChanged`) so generated content stays diffable; automation.md gains a Bitbucket Pipelines template and the GitLab template's diff/add paths now include `AGENTS.md`/`CLAUDE.md` (upstream CI-example alignment; the workflow-file path is omitted — this port generates no CI files). Out of scope: CLI-reference/chat-mode rewording (`[omitted]` here), `OPENWIKI_PROVIDER` env pins and the Step-0 workflow template (provider/CI plumbing), OAuth/env/redaction fixes and new tests (CLI plumbing).
 
 - README: catch up to the v0.1.1 sync — upstream port version 0.1.0 → 0.1.1, marker snippet now covers root `CLAUDE.md` as well as `AGENTS.md`, and document the `INSTRUCTIONS.md` "Wiki brief" in Use.

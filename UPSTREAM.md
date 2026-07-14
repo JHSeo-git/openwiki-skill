@@ -22,7 +22,7 @@ Only these upstream paths carry skill-relevant behavior. Changes anywhere else (
 | `src/constants.ts` — path conventions (`openwiki`, `openwiki/.last-update.json`) | both wiki skills |
 | `examples/*.yml` | `skills/openwiki/references/automation.md` |
 
-Explicitly out of scope: `src/auth/*`, `src/connectors/*` (runtime; its prompt-bearing functions are mapped above via `ingestion.ts`), `src/schedules.ts`, `src/onboarding.ts` (its `INSTRUCTIONS.md` goal-file conventions — repo `openwiki/INSTRUCTIONS.md` and personal `~/.openwiki/INSTRUCTIONS.md` — are mirrored by the wiki skills' Step 1), `src/openwiki-home.ts` (directory constants only informative), `src/credentials.tsx`, `src/cli.tsx`, `src/env.ts`, `src/diagnostics.ts`, `src/startup.ts`.
+Explicitly out of scope: `src/auth/*`, `src/connectors/*` (runtime; its prompt-bearing functions are mapped above via `ingestion.ts`, and port-original host-tool wiring guidance lives in `skills/openwiki-personal/references/connectors.md`), `src/schedules.ts`, `src/onboarding.ts` (its `INSTRUCTIONS.md` goal-file conventions — repo `openwiki/INSTRUCTIONS.md` and personal `~/.openwiki/INSTRUCTIONS.md` — are mirrored by the wiki skills' Step 1), `src/openwiki-home.ts` (directory constants only informative), `src/credentials.tsx`, `src/cli.tsx`, `src/env.ts`, `src/diagnostics.ts`, `src/startup.ts`.
 
 ## Sync procedure
 
