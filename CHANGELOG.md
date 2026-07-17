@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (2026-07-17)
 
 - Upstream sync: bump pin `7c084f9` → `d4e94ab` (upstream v0.2.0, "OKF + telemetry"). Ported into both wiki skills' Step 3: "Front matter requirements (OKF)" (Google Knowledge Catalog schema — the five-field formatter, retrieval-optimized descriptions, update-run preservation rule) with an `[adapted]` self-check standing in for upstream's write-time validator (`frontmatter-validator.ts`); "OKF relationship modeling" (concept nodes/edges, prose-anchored links, no reciprocal-link padding, ≥2 connections per substantive concept); planning discipline records source concept -> relationship meaning -> target concept; "Index discipline" plus a new Step 4 porting `index-middleware.ts` (deterministic per-directory `index.md` — `type: Documentation Index` front matter, sorted Files/Directories sections, title-cased directory names, write-only-on-diff), with metadata renumbered to Step 5; coverage self-check gains the concept-graph audit and the plan-deletion check; subagent discipline gains the migrate-wiki-to-okf exception (per-directory write-scoped subagents).
 
