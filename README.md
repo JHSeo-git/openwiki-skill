@@ -2,7 +2,7 @@
 
 [![skills.sh](https://skills.sh/b/JHSeo-git/openwiki-skill)](https://skills.sh/JHSeo-git/openwiki-skill)
 
-Agent skills that write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.1.2 for coding agents like Claude Code and Codex.
+Agent skills that write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.2.0 for coding agents like Claude Code and Codex. Since v0.2.0 the wikis are OKF-compliant: every page opens with Google Knowledge Catalog (OKF) YAML front matter, pages cross-link as an evidence-backed concept graph, and each directory gets a deterministically generated `index.md`.
 
 The upstream CLI drives an LLM through provider APIs. This port drops that plumbing: your coding agent already is the LLM, with filesystem and git tools, so it executes the same workflow directly — the upstream system prompt is reproduced verbatim inside the skill, with harness differences marked `[adapted]`. No API key, no runtime, no configuration.
 
@@ -13,6 +13,7 @@ The upstream CLI drives an LLM through provider APIs. This port drops that plumb
 | [`openwiki`](skills/openwiki/SKILL.md) | Generate (init) or surgically refresh (update) a repo's `openwiki/` wiki — upstream's code mode. Auto-detects the mode; manages the marker snippet in root `AGENTS.md` and `CLAUDE.md`. |
 | [`openwiki-personal`](skills/openwiki-personal/SKILL.md) | Build or maintain the personal knowledge wiki at `~/.openwiki/wiki` — upstream's personal mode, with evidence from your own MCP servers, web search, and local repos instead of built-in OAuth connectors. Per-source wiring guidance: [`references/connectors.md`](skills/openwiki-personal/references/connectors.md). |
 | [`openwiki-ask`](skills/openwiki-ask/SKILL.md) | Answer questions from either wiki, wiki-first, citing pages. |
+| [`migrate-wiki-to-okf`](skills/migrate-wiki-to-okf/SKILL.md) | Make a pre-0.2.0 wiki OKF-compliant: add or correct front matter across every page (one subagent per directory) without changing page bodies — upstream's bundled migration skill. |
 
 ## Install
 
@@ -20,12 +21,13 @@ The upstream CLI drives an LLM through provider APIs. This port drops that plumb
 npx skills add JHSeo-git/openwiki-skill
 ```
 
-Or manually: copy `skills/openwiki/`, `skills/openwiki-personal/`, and `skills/openwiki-ask/` into your agent's skills directory, e.g. `~/.claude/skills/` for Claude Code.
+Or manually: copy `skills/openwiki/`, `skills/openwiki-personal/`, `skills/openwiki-ask/`, and `skills/migrate-wiki-to-okf/` into your agent's skills directory, e.g. `~/.claude/skills/` for Claude Code.
 
 ## Use
 
-- "Generate documentation for this repository" → init: `openwiki/quickstart.md` entrypoint plus focused section pages, the upstream marker snippet (`<!-- OPENWIKI:START/END -->`) in root `AGENTS.md` and `CLAUDE.md`, and run metadata in `openwiki/.last-update.json`.
+- "Generate documentation for this repository" → init: `openwiki/quickstart.md` entrypoint plus focused section pages — each with OKF front matter and concept-graph cross-links, each directory with a generated `index.md` — the upstream marker snippet (`<!-- OPENWIKI:START/END -->`) in root `AGENTS.md` and `CLAUDE.md`, and run metadata in `openwiki/.last-update.json`.
 - "Update the wiki" → surgical update driven by a docs impact plan and a soft diff budget; no-ops cleanly (early git check + content-hash check) when nothing relevant changed.
+- "Migrate the wiki to OKF" → `migrate-wiki-to-okf` adds missing/incorrect front matter across an existing wiki without touching page bodies; the wiki skills also fall back to it when they meet a pre-OKF wiki.
 - "How does X work?" → `openwiki-ask` answers from the wiki, citing pages and their inline source references.
 - "Set up my personal wiki" / "pull today's Slack into my wiki" → `openwiki-personal` initializes or source-updates `~/.openwiki/wiki`.
 - Steer either wiki with a brief: a user-authored `openwiki/INSTRUCTIONS.md` (repo) or `~/.openwiki/INSTRUCTIONS.md` (personal) is read into every run as the "Wiki brief"; the skills read it but never rewrite it.

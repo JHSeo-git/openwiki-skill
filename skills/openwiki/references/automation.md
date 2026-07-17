@@ -57,7 +57,7 @@ Read/Glob/Grep are already read-only, the git commands above are read-only, and 
 
 ## 3. CI with an API credential
 
-CI runners have no subscription login. Set `ANTHROPIC_API_KEY` (API billing) or `CLAUDE_CODE_OAUTH_TOKEN` (subscription; generate with `claude setup-token`) as a CI secret. The skill is cloned into the workspace at `.claude/skills/openwiki/`; the PR/MR steps only add `openwiki/` and the root instruction files, so the clone is never committed.
+CI runners have no subscription login. Set `ANTHROPIC_API_KEY` (API billing) or `CLAUDE_CODE_OAUTH_TOKEN` (subscription; generate with `claude setup-token`) as a CI secret. The skills are cloned into the workspace at `.claude/skills/` (`openwiki`, plus `migrate-wiki-to-okf` so a pre-OKF wiki can be brought up to date in the same run); the PR/MR steps only add `openwiki/` and the root instruction files, so the clone is never committed.
 
 ### GitHub Actions
 
@@ -78,6 +78,13 @@ permissions:
 
 jobs:
   update:
+    # Scheduled runs only fire in the origin repo by default, so contributor
+    # forks do not silently arm a daily job that requires a provider secret
+    # (upstream #370). Replace OWNER/REPO with this repository. Fork owners can
+    # opt in without editing this file by setting the
+    # OPENWIKI_ENABLE_SCHEDULED_UPDATE repository variable to "true". Manual
+    # dispatch remains available for intentional runs and testing.
+    if: github.event_name == 'workflow_dispatch' || github.repository == 'OWNER/REPO' || vars.OPENWIKI_ENABLE_SCHEDULED_UPDATE == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -97,6 +104,7 @@ jobs:
           git clone --depth 1 https://github.com/JHSeo-git/openwiki-skill /tmp/openwiki-skill
           mkdir -p .claude/skills
           cp -R /tmp/openwiki-skill/skills/openwiki .claude/skills/openwiki
+          cp -R /tmp/openwiki-skill/skills/migrate-wiki-to-okf .claude/skills/migrate-wiki-to-okf
 
       - name: Run openwiki update
         # --dangerously-skip-permissions is acceptable here: the job runs in an
@@ -140,6 +148,7 @@ openwiki_update:
     - git clone --depth 1 https://github.com/JHSeo-git/openwiki-skill /tmp/openwiki-skill
     - mkdir -p .claude/skills
     - cp -R /tmp/openwiki-skill/skills/openwiki .claude/skills/openwiki
+    - cp -R /tmp/openwiki-skill/skills/migrate-wiki-to-okf .claude/skills/migrate-wiki-to-okf
     - git config user.name "${GITLAB_USER_NAME:-OpenWiki Bot}"
     - git config user.email "${GITLAB_USER_EMAIL:-openwiki@example.com}"
   script:
@@ -182,6 +191,7 @@ pipelines:
             - git clone --depth 1 https://github.com/JHSeo-git/openwiki-skill /tmp/openwiki-skill
             - mkdir -p .claude/skills
             - cp -R /tmp/openwiki-skill/skills/openwiki .claude/skills/openwiki
+            - cp -R /tmp/openwiki-skill/skills/migrate-wiki-to-okf .claude/skills/migrate-wiki-to-okf
             - git config user.name "${BITBUCKET_USER_NAME:-OpenWiki Bot}"
             - git config user.email "${BITBUCKET_USER_EMAIL:-openwiki@example.com}"
             - claude --dangerously-skip-permissions -p "Use the openwiki skill to update this repository's wiki. If it reports the wiki is already current, change nothing."
