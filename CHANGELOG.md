@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Upstream sync: bump pin `264ee84` → `0851444` (upstream v0.2.2). Mapped-path changes are provider plumbing only (`constants.ts`: two Gemini model entries plus the `OPENWIKI_VERSION` bump); `prompt.ts`, `utils.ts`, `src/okf/`, `code-mode.ts`, `ingestion.ts`, `types.ts`, `skills/`, and `examples/` are unchanged — nothing to port. Skill intros and README now say v0.2.2; `log.md` generation still absent upstream (UPSTREAM.md watch note unchanged).
+
 ## 0.2.1 (2026-07-21)
 
 - Upstream sync: bump pin `d4e94ab` → `264ee84` (upstream v0.2.1). OKF aligned with Google's v0.1 spec (#373/#376/#390): "Front matter requirements (OKF)" rewritten in both wiki skills — only `type` required (title/description/resource/tags now recommended-in-priority-order), `timestamp` and producer-defined extension fields accepted and preserved across round trips, `index.md`/`log.md` declared reserved documents, softer description/update-run wording; generated indexes lose their front matter (bundle-root index now carries only `okf_version: "0.1"`, per-directory title/description dropped, empty directories render `# Files`, `log.md` excluded from listings) — Step 4 re-ported from the renamed `src/okf/index-sync.ts`.
