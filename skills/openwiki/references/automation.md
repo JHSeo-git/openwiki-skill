@@ -57,7 +57,7 @@ Read/Glob/Grep are already read-only, the git commands above are read-only, and 
 
 ## 3. CI with an API credential
 
-CI runners have no subscription login. Set `ANTHROPIC_API_KEY` (API billing) or `CLAUDE_CODE_OAUTH_TOKEN` (subscription; generate with `claude setup-token`) as a CI secret. The skill is cloned into the workspace at `.claude/skills/openwiki/`; the PR/MR steps only add `openwiki/` and the root instruction files, so the clone is never committed.
+CI runners have no subscription login. Set `ANTHROPIC_API_KEY` (API billing) or `CLAUDE_CODE_OAUTH_TOKEN` (subscription; generate with `claude setup-token`) as a CI secret. The skills are cloned into the workspace at `.claude/skills/` (`openwiki` plus its `mermaid-diagrams` companion); the PR/MR steps only add `openwiki/` and the root instruction files, so the clone is never committed.
 
 ### GitHub Actions
 
@@ -88,22 +88,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
           persist-credentials: true
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
 
-      - name: Install Claude Code and the openwiki skill
+      - name: Install Claude Code and the openwiki skills
         run: |
           npm install --global @anthropic-ai/claude-code
           git clone --depth 1 https://github.com/JHSeo-git/openwiki-skill /tmp/openwiki-skill
           mkdir -p .claude/skills
           cp -R /tmp/openwiki-skill/skills/openwiki .claude/skills/openwiki
+          cp -R /tmp/openwiki-skill/skills/mermaid-diagrams .claude/skills/mermaid-diagrams
 
       - name: Run openwiki update
         # --dangerously-skip-permissions is acceptable here: the job runs in an
@@ -147,6 +148,7 @@ openwiki_update:
     - git clone --depth 1 https://github.com/JHSeo-git/openwiki-skill /tmp/openwiki-skill
     - mkdir -p .claude/skills
     - cp -R /tmp/openwiki-skill/skills/openwiki .claude/skills/openwiki
+    - cp -R /tmp/openwiki-skill/skills/mermaid-diagrams .claude/skills/mermaid-diagrams
     - git config user.name "${GITLAB_USER_NAME:-OpenWiki Bot}"
     - git config user.email "${GITLAB_USER_EMAIL:-openwiki@example.com}"
   script:
@@ -189,6 +191,7 @@ pipelines:
             - git clone --depth 1 https://github.com/JHSeo-git/openwiki-skill /tmp/openwiki-skill
             - mkdir -p .claude/skills
             - cp -R /tmp/openwiki-skill/skills/openwiki .claude/skills/openwiki
+            - cp -R /tmp/openwiki-skill/skills/mermaid-diagrams .claude/skills/mermaid-diagrams
             - git config user.name "${BITBUCKET_USER_NAME:-OpenWiki Bot}"
             - git config user.email "${BITBUCKET_USER_EMAIL:-openwiki@example.com}"
             - claude --dangerously-skip-permissions -p "Use the openwiki skill to update this repository's wiki. If it reports the wiki is already current, change nothing."

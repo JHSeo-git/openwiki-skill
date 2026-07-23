@@ -2,7 +2,7 @@
 
 [![skills.sh](https://skills.sh/b/JHSeo-git/openwiki-skill)](https://skills.sh/JHSeo-git/openwiki-skill)
 
-Agent skills that write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.2.2 for coding agents like Claude Code and Codex. The wikis are OKF-compliant (Google Knowledge Catalog OKF v0.1): every concept page opens with YAML front matter (only `type` required; producer extensions preserved), pages cross-link as an evidence-backed concept graph, each directory gets a deterministically generated `index.md`, and non-compliant pages are normalized automatically at the start of every run.
+Agent skills that write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.2.3 for coding agents like Claude Code and Codex. The wikis are OKF-compliant (Google Knowledge Catalog OKF v0.1): every concept page opens with YAML front matter (only `type` required; producer extensions preserved), pages cross-link as an evidence-backed concept graph, each directory gets a deterministically generated `index.md`, and non-compliant pages are normalized automatically at the start of every run. Pages documenting runtime flows, lifecycles, or data models embed source-grounded Mermaid diagrams, validated after every run.
 
 The upstream CLI drives an LLM through provider APIs. This port drops that plumbing: your coding agent already is the LLM, with filesystem and git tools, so it executes the same workflow directly — the upstream system prompt is reproduced verbatim inside the skill, with harness differences marked `[adapted]`. No API key, no runtime, no configuration.
 
@@ -13,6 +13,7 @@ The upstream CLI drives an LLM through provider APIs. This port drops that plumb
 | [`openwiki`](skills/openwiki/SKILL.md) | Generate (init) or surgically refresh (update) a repo's `openwiki/` wiki — upstream's code mode. Auto-detects the mode; manages the marker snippet in root `AGENTS.md` and `CLAUDE.md`. |
 | [`openwiki-personal`](skills/openwiki-personal/SKILL.md) | Build or maintain the personal knowledge wiki at `~/.openwiki/wiki` — upstream's personal mode, with evidence from your own MCP servers, web search, and local repos instead of built-in OAuth connectors. Per-source wiring guidance: [`references/connectors.md`](skills/openwiki-personal/references/connectors.md). |
 | [`openwiki-ask`](skills/openwiki-ask/SKILL.md) | Answer questions from either wiki, wiki-first, citing pages. |
+| [`mermaid-diagrams`](skills/mermaid-diagrams/SKILL.md) | Diagram-type choices and Mermaid syntax-safety rules the wiki skills consult when embedding diagrams — upstream's bundled skill. |
 
 ## Install
 
@@ -20,7 +21,7 @@ The upstream CLI drives an LLM through provider APIs. This port drops that plumb
 npx skills add JHSeo-git/openwiki-skill
 ```
 
-Or manually: copy `skills/openwiki/`, `skills/openwiki-personal/`, and `skills/openwiki-ask/` into your agent's skills directory, e.g. `~/.claude/skills/` for Claude Code. (If you installed the `migrate-wiki-to-okf` skill from v0.2.0, remove it — upstream 0.2.1 replaced it with an automatic normalization pass inside the wiki skills.)
+Or manually: copy `skills/openwiki/`, `skills/openwiki-personal/`, `skills/openwiki-ask/`, and `skills/mermaid-diagrams/` into your agent's skills directory, e.g. `~/.claude/skills/` for Claude Code. (If you installed the `migrate-wiki-to-okf` skill from v0.2.0, remove it — upstream 0.2.1 replaced it with an automatic normalization pass inside the wiki skills.)
 
 ## Use
 

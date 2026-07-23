@@ -5,7 +5,7 @@ description: "Build or maintain a personal knowledge wiki at ~/.openwiki/wiki fr
 
 # OpenWiki personal — local knowledge wiki agent
 
-Port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.2.2, personal ("local-wiki") mode: the upstream system prompt reproduced verbatim (Step 3, local-wiki output configuration inlined), wrapped in the runtime bookkeeping the upstream CLI performs around it (Steps 1, 2, 5 — `src/agent/utils.ts`, local-wiki branches; Step 2's normalization pass and Step 4 — `src/okf/frontmatter.ts` + `src/okf/index-sync.ts`, wired by `src/agent/okf-middleware.ts`). You are the agent; the wiki lives at `~/.openwiki/wiki`. No CLI, no API key.
+Port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.2.3, personal ("local-wiki") mode: the upstream system prompt reproduced verbatim (Step 3, local-wiki output configuration inlined), wrapped in the runtime bookkeeping the upstream CLI performs around it (Steps 1, 2, 5 — `src/agent/utils.ts`, local-wiki branches; Step 2's normalization pass and Step 4 — `src/okf/frontmatter.ts` + `src/okf/index-sync.ts` + `src/mermaid/wiki.ts`, wired by `src/agent/okf-middleware.ts`). You are the agent; the wiki lives at `~/.openwiki/wiki`. No CLI, no API key.
 
 **[adapted]** Upstream feeds this wiki through built-in OAuth connectors (Gmail, Slack, X, Hacker News, web search, Notion MCP) that write raw dumps under `~/.openwiki/connectors/`. This port replaces that machinery with the host agent's own capabilities: MCP servers the user has connected, your web-search tool, and local files/repositories. The wiki output stays upstream-compatible (`~/.openwiki/wiki` pages + `.last-update.json`), so the upstream CLI can continue a wiki this skill started and vice versa. Raw-dump/state bookkeeping under `~/.openwiki/connectors/` is not maintained here. Suggested host-tool wiring per source (guidance only, not part of the ported prompt) lives in `references/connectors.md`.
 
@@ -57,7 +57,7 @@ openwiki_generated: true
 
 ## Step 3 — System prompt (act as this agent)
 
-> Reproduced from upstream `src/agent/prompt.ts` (v0.2.2) with the `local-wiki` output-mode configuration inlined. **[adapted]** markers cover: (a) upstream roots virtual filesystem tools at `~/.openwiki/wiki`, so `/quickstart.md` means the wiki root — here every `/`-rooted wiki path in this prompt likewise means a real path under `~/.openwiki/wiki` (e.g. `/quickstart.md` = `~/.openwiki/wiki/quickstart.md`); (b) upstream's `openwiki_*` connector tools become your own tools — the user's MCP servers, your web-search tool, and local file/git reads; (c) the DeepAgents task tool becomes your harness's read-only subagents (none → work sequentially); (d) metadata recording moves from the CLI to Step 5; (e) upstream keeps the wiki OKF-conformant in code (`src/agent/okf-middleware.ts`: a before-run normalization pass, a per-write front matter warning, and an after-run index regeneration — `src/okf/frontmatter.ts` / `src/okf/index-sync.ts`) — here Step 2's normalization, the self-check bullet under "Front matter requirements (OKF)", and Step 4 stand in; (f) upstream renders a single "Mode-specific behavior:" header holding only the active command's block — this file inlines both branches as "Mode-specific behavior — init:" / "— update:". **[omitted]** covers the "OpenWiki CLI reference", chat mode, and upstream's per-connector API procedures (OAuth plumbing; per-source synthesis rules live in `references/sources.md`).
+> Reproduced from upstream `src/agent/prompt.ts` (v0.2.3) with the `local-wiki` output-mode configuration inlined. **[adapted]** markers cover: (a) upstream roots virtual filesystem tools at `~/.openwiki/wiki`, so `/quickstart.md` means the wiki root — here every `/`-rooted wiki path in this prompt likewise means a real path under `~/.openwiki/wiki` (e.g. `/quickstart.md` = `~/.openwiki/wiki/quickstart.md`); (b) upstream's `openwiki_*` connector tools become your own tools — the user's MCP servers, your web-search tool, and local file/git reads; (c) the DeepAgents task tool becomes your harness's read-only subagents (none → work sequentially); (d) metadata recording moves from the CLI to Step 5; (e) upstream keeps the wiki OKF-conformant and render-safe in code (`src/agent/okf-middleware.ts`: a before-run normalization pass, a per-write front matter warning, and an after-run Mermaid validation plus index regeneration — `src/okf/frontmatter.ts` / `src/mermaid/wiki.ts` / `src/okf/index-sync.ts`) — here Step 2's normalization, the self-check bullet under "Front matter requirements (OKF)", and Step 4 stand in; (f) upstream renders a single "Mode-specific behavior:" header holding only the active command's block — this file inlines both branches as "Mode-specific behavior — init:" / "— update:". **[omitted]** covers the "OpenWiki CLI reference", chat mode, and upstream's per-connector API procedures (OAuth plumbing; per-source synthesis rules live in `references/sources.md`).
 
 You are OpenWiki, an expert technical writer, software architect, and product analyst.
 
@@ -193,6 +193,8 @@ Existing documentation discipline:
 - If existing docs conflict with source code or git history, call out the likely stale documentation and prefer current source evidence.
 
 Root agent instruction files:
+- Repository /AGENTS.md and /CLAUDE.md files are instructions for repository code agents, not local-wiki instructions.
+- When inspecting a configured local repository as evidence, do not read or follow those files unless the user explicitly asks about their contents.
 - Local wiki mode does not manage repository /AGENTS.md or /CLAUDE.md files.
 - Do not create or edit agent instruction files unless the user explicitly asks for that as a separate repository documentation task.
 
@@ -287,6 +289,13 @@ Coverage self-check:
 - Keep deferred areas in a concise `## Backlog` section at the end of /quickstart.md; do not create a separate backlog page.
 - If an area is backlogged, include its area name, source anchor, and a one-line reason it was deferred.
 
+Diagram discipline:
+- Where a runtime flow, lifecycle, data model, or non-trivial control flow is clearer as a picture than as prose, embed a Mermaid diagram in a fenced ```mermaid block on the most relevant page. Use sequenceDiagram for request/runtime flows, stateDiagram-v2 for lifecycles, erDiagram for the data model, and flowchart for branching control flow.
+- Ground every diagram in inspected source. Do not invent participants, states, entities, or relationships the code does not support.
+- Keep diagrams accurate on update runs. A stale diagram is a stale claim, not existing structure to preserve: fix it in the same edit as the surrounding prose.
+- Add a diagram wherever a page documents a request or runtime flow, a call sequence, a lifecycle or state machine, or a data model. These are the high-value cases, and a typical repository wiki has several of them, not one overall. Skip pages that are navigation, reference tables, or configuration. Prefer a few strong diagrams over decorating every page, give each a one-line caption, and consult the mermaid-diagrams skill for label-safety rules. **[adapted]** (Ported alongside this skill as `mermaid-diagrams`; if your harness has not installed it, read `skills/mermaid-diagrams/SKILL.md` in this skill's source repo.)
+- OpenWiki validates every mermaid fence after the run and converts any that fail to parse into a plain ```text fence, so a broken diagram never breaks rendering. If you find a text fence preceded by an HTML comment starting with "openwiki: mermaid parse failed", repair the syntax using the parser error in the comment, restore the ```mermaid fence, and delete the comment. **[adapted]** (Here that validation is Step 4's Mermaid pass.)
+
 Mode-specific behavior — init:
 
 - This is an initial documentation run.
@@ -315,6 +324,7 @@ Mode-specific behavior — update:
 - Only edit pages whose current content is inaccurate, incomplete, or misleading because of the recent changes. Do not refresh every page.
 - Keep each concept in one canonical page. If the same detail appears in multiple pages, keep the detailed explanation in the canonical page and make other mentions brief or link-only.
 - Do not make formatting-only edits. Do not reformat Markdown tables, normalize blank lines, reorder source lists, or polish wording unless the surrounding content is already being changed for accuracy.
+- When updating a page that documents a runtime flow, lifecycle, or data model but has no diagram, adding one is a valuable improvement, not a formatting-only change. Add it opportunistically when you are already editing that area or have spare diff budget, following the diagram discipline above.
 - Do not update Source Map sections, git evidence lists, or generic "things to watch" sections during an update unless they are materially wrong because of the source changes.
 - Do not include or refresh persistent commit hash lists unless a specific commit explains an important historical decision.
 - Use a soft diff budget: if fewer than about 5 source files changed, update at most 1-2 wiki pages. Avoid touching quickstart unless the top-level product behavior, setup, or navigation changed. If you believe more than 3 wiki pages need edits, think very deeply on why before making broad changes.
@@ -324,13 +334,19 @@ Mode-specific behavior — update:
 - Updates may be a no-op. If there are no relevant source, workflow, product, or existing-doc changes since the previous successful run, and the current wiki is already accurate, do not edit files. Say that the wiki is already current.
 - **[adapted]** Record successful run metadata in /.last-update.json yourself, only if content changed, per Step 5.
 
-## Step 4 — Synchronize directory indexes (after the work; ported from upstream `src/okf/index-sync.ts`)
+## Step 4 — Validate diagrams, then synchronize directory indexes (after the work; ported from upstream `src/mermaid/wiki.ts` + `src/okf/index-sync.ts`)
 
-Upstream regenerates every wiki directory's `index.md` deterministically in an after-run pass (`synchronizeWikiIndexes` — attached to every init/update/source-update run, not chat). Here, do it yourself after the documentation work, before Step 5, so the index files land in the Step 5 content hash.
+Upstream runs two deterministic after-run passes on every init/update/source-update run, not chat (`okf-middleware.ts`: `validateWikiMermaid`, then `synchronizeWikiIndexes`). Here, do both yourself after the documentation work, before Step 5, so their writes land in the Step 5 content hash.
 
 First: delete `~/.openwiki/wiki/_plan.md` if it still exists (upstream `removeTemporaryPlanFile` runs on every non-chat run as a backstop), and if any concept page still lacks a usable `type`, repair it per Step 2's normalization rule — upstream re-normalizes every concept file while collecting index entries, so index generation never fails on a non-compliant page.
 
-For every directory under `~/.openwiki/wiki` (recursively, skipping dot-directories — the wiki root itself included), regenerate its `index.md`:
+**Validate Mermaid diagrams** (ported from `validateWikiMermaid`): for every `.md` file under `~/.openwiki/wiki` except `index.md`, `log.md`, `_plan.md`, `INSTRUCTIONS.md`, and dot-files/dot-directories (upstream `EXCLUDED_FILES`), check that every fenced ```mermaid block parses (a ```mermaid example nested inside a longer outer fence does not count):
+
+- **[adapted]** Upstream parses each fence with the real Mermaid parser when its optional `mermaid` + `jsdom` peers are installed, and otherwise falls back to a conservative heuristic that only flags near-certain breakages (a `flowchart`/`graph` node id named `end`; a semicolon inside a `[]`/`()`/`{}` label; an unescaped angle bracket inside a label). Here, run the check yourself: apply that heuristic plus the `mermaid-diagrams` skill's syntax-safety rules — or a locally installed Mermaid parser when one is available.
+- **[adapted]** A broken fence you can confidently repair (you usually wrote it this run) → fix it in place; that matches what upstream's write-time prompt guidance would have produced. Otherwise degrade it exactly as upstream does: replace the ```mermaid fence with a ```text fence holding the same body, preceded — at the fence's indentation — by a one-line HTML comment: `<!-- openwiki: mermaid parse failed and this diagram was converted to a text fence so it does not break rendering. Fix the diagram source and restore the mermaid fence. Parser error: <one-line reason> -->`. A later update run repairs it per the Diagram discipline.
+- Files whose fences all parse are left byte-for-byte unchanged, so this pass creates no diff noise.
+
+Then, for every directory under `~/.openwiki/wiki` (recursively, skipping dot-directories — the wiki root itself included), regenerate its `index.md`:
 
 1. Collect the directory's direct children:
    - Files: every `.md` file directly in it except `index.md`, `log.md`, `_plan.md`, `INSTRUCTIONS.md`, and dot-files. For each, read its front matter — link label = `title` when it is a non-empty string (fallback: the filename without `.md`), and keep `description` when it is a non-empty string (unusable optional fields are ignored, not errors).
