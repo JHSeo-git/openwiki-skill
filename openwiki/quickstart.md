@@ -1,7 +1,7 @@
 ---
 type: Quickstart Guide
 title: openwiki-skill quickstart
-description: Entry point for the openwiki-skill repository wiki — what this port of langchain-ai/openwiki is, the layout of the three skills and their reference files, the step-by-step runtime of the code and personal wiki modes, and the fidelity rules for changing or syncing the port.
+description: Entry point for the openwiki-skill repository wiki — what this port of langchain-ai/openwiki is, the layout of the four skills and their reference files, the step-by-step runtime of the code and personal wiki modes, and the fidelity rules for changing or syncing the port.
 tags: [openwiki, skills, port, quickstart]
 ---
 
@@ -9,7 +9,7 @@ tags: [openwiki, skills, port, quickstart]
 
 ## What this repository is
 
-Agent skills that write, maintain, and answer from OpenWiki wikis — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.2.1 for coding agents such as Claude Code and Codex. Upstream 0.1.0 split into two modes, and the port mirrors that: **code mode** documents a repository in `openwiki/`; **personal mode** maintains a local knowledge wiki at `~/.openwiki/wiki` fed by the user's own sources. The generated wikis are OKF-compliant (Google Knowledge Catalog OKF v0.1): every concept page opens with YAML front matter (only `type` required; producer extension fields preserved), pages cross-link as an evidence-backed concept graph, each wiki directory gets a deterministically regenerated `index.md`, and non-compliant pages are normalized automatically at the start of every run.
+Agent skills that write, maintain, and answer from OpenWiki wikis — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.2.3 for coding agents such as Claude Code and Codex. Upstream 0.1.0 split into two modes, and the port mirrors that: **code mode** documents a repository in `openwiki/`; **personal mode** maintains a local knowledge wiki at `~/.openwiki/wiki` fed by the user's own sources. The generated wikis are OKF-compliant (Google Knowledge Catalog OKF v0.1): every concept page opens with YAML front matter (only `type` required; producer extension fields preserved), pages cross-link as an evidence-backed concept graph, each wiki directory gets a deterministically regenerated `index.md`, and non-compliant pages are normalized automatically at the start of every run. Since 0.2.3 pages that document runtime flows, lifecycles, or data models also embed source-grounded Mermaid diagrams, validated after every run (broken fences degrade to text fences instead of breaking rendering).
 
 The upstream project is a CLI that drives an LLM through provider APIs (API keys, OAuth connectors, an agent runtime, a scheduler). This repo exists because a coding agent already *is* that LLM, with filesystem, git, MCP, and web-search tools attached — so the port keeps upstream's product value (its agent prompts and runtime bookkeeping) and deletes the plumbing. Result: no API key, no OAuth, no runtime, no configuration. Install and usage live in [`README.md`](../README.md); this wiki is the map of how the repo itself is built.
 
@@ -23,6 +23,7 @@ The upstream project is a CLI that drives an LLM through provider APIs (API keys
 | [`skills/openwiki-personal/references/sources.md`](../skills/openwiki-personal/references/sources.md) | Source update runs: the per-source prompt (24h window) plus upstream's synthesis policy and per-source guidance (gmail/notion/x/hackernews/web-search/slack/git-repo), verbatim. |
 | [`skills/openwiki-personal/references/connectors.md`](../skills/openwiki-personal/references/connectors.md) | Guidance-only (port-original, no upstream counterpart): per upstream connector, its actual upstream mechanism (direct OAuth APIs for Slack/Gmail/X, Tavily, public HN APIs, Notion MCP, local git-repo reads) and the suggested host-tool stand-in, plus port-only sources (e.g. GeekNews via its Atom feed), a researched Slack route (custom app + xoxp user token), and the `~/.openwiki/.env` credential convention shared with upstream `src/env.ts`. |
 | [`skills/openwiki-ask/SKILL.md`](../skills/openwiki-ask/SKILL.md) | Q&A over both wikis, wiki-first (upstream's "Wiki-first question answering" rules, which are mode-parameterized since 0.2.1), citing pages and their inline source references. |
+| [`skills/mermaid-diagrams/SKILL.md`](../skills/mermaid-diagrams/SKILL.md) | Upstream's bundled diagram-authoring skill (added 0.2.3), near-verbatim: diagram-type choices and Mermaid syntax-safety rules that the wiki skills' "Diagram discipline" consults; only the validation-ownership line is `[adapted]` (validation happens in the wiki skills' Step 4 here). |
 | [`UPSTREAM.md`](../UPSTREAM.md) | Canonical for upstream tracking: pinned upstream commit, the prompt-branch → skill mapping, and the 4-step sync procedure. |
 | [`docs/superpowers/`](../docs/superpowers/) | Design specs (Korean) and implementation plans. The plans embed the skill contents or deterministic extraction commands, plus the verification scripts that check them. |
 | [`CHANGELOG.md`](../CHANGELOG.md), [`LICENSE`](../LICENSE) | Release log (one bullet per change); MIT. |
@@ -36,9 +37,23 @@ Upstream's CLI wraps one LLM agent in runtime bookkeeping (`src/agent/utils.ts`)
 0. **Code setup** — idempotently maintain the `<!-- OPENWIKI:START/END -->` snippet in `/AGENTS.md` and `/CLAUDE.md` (ported from `src/code-mode.ts`; legacy marker-less sections are migrated, an `@AGENTS.md`-importing CLAUDE.md counts as covered, upstream's GH Actions workflow generation is deliberately omitted).
 1. **Git evidence** — reads the optional user-authored `openwiki/INSTRUCTIONS.md` brief (injected into the user prompt as "Wiki brief"; control metadata the run never rewrites), then `git --no-pager status/rev-parse/log/diff` with mode-dependent history windows, plus an *early no-op exit* (ported from `getUpdateNoopStatus`): clean worktree + only-`openwiki/` commits since the recorded head → report "already current" and stop.
 2. **Content snapshot + normalization** — hash the `openwiki/` tree (excluding metadata and the plan file), then normalize any non-compliant page to a minimal derived front matter block flagged `openwiki_generated: true` (ported from `createOpenWikiContentSnapshot` + `migrateWikiToOkf`; since 0.2.1 this code pass replaces the former migrate-wiki-to-okf skill).
-3. **The system prompt** — upstream `src/agent/prompt.ts` with the `repository` output configuration inlined, reproduced *verbatim*; harness differences marked `**[adapted]**`, content owned by the other skills marked `**[omitted]**`. The prompt carries the OKF sections: front matter requirements (Google OKF v0.1 — only `type` required, producer extensions preserved, write-time validation ported as a self-check) and relationship modeling.
-4. **Index sync** — regenerate every wiki directory's `index.md` deterministically (ported from `src/okf/index-sync.ts`: front-matter-free `# Files`/`# Directories` listings, `okf_version: "0.1"` only on the root index, write-only-on-diff), after a repair backstop for any page still lacking a usable `type`.
+3. **The system prompt** — upstream `src/agent/prompt.ts` with the `repository` output configuration inlined, reproduced *verbatim*; harness differences marked `**[adapted]**`, content owned by the other skills marked `**[omitted]**`. The prompt carries the OKF sections — front matter requirements (Google OKF v0.1 — only `type` required, producer extensions preserved, write-time validation ported as a self-check) and relationship modeling — and, since 0.2.3, the "Diagram discipline" (source-grounded Mermaid diagrams on flow/lifecycle/data-model pages, per the `mermaid-diagrams` skill's rules).
+4. **Diagram validation + index sync** — validate every ```mermaid fence and degrade unparseable ones to ```text fences behind an `openwiki: mermaid parse failed` HTML comment (ported from `src/mermaid/wiki.ts`; the parser is replaced by upstream's own no-parser heuristic plus the `mermaid-diagrams` syntax rules), then regenerate every wiki directory's `index.md` deterministically (ported from `src/okf/index-sync.ts`: front-matter-free `# Files`/`# Directories` listings, `okf_version: "0.1"` only on the root index, write-only-on-diff), after a repair backstop for any page still lacking a usable `type`.
 5. **Metadata** — recompute the hash; only if content changed, write `openwiki/.last-update.json` (`updatedAt`, `command`, `gitHead`, `model`) — even when the run failed after generating content (ported from `persistRunMetadataIfChanged`).
+
+```mermaid
+flowchart TD
+    S0["Step 0: refresh AGENTS.md and CLAUDE.md snippet"] --> S1["Step 1: collect git evidence"]
+    S1 -->|"update mode, clean tree, only openwiki/ commits since recorded head"| NOOP["report wiki already current and stop"]
+    S1 --> S2["Step 2: snapshot hash, normalize non-compliant front matter"]
+    S2 --> S3["Step 3: documentation work under openwiki/"]
+    S3 --> S4["Step 4: validate mermaid fences, regenerate index.md files"]
+    S4 --> S5["Step 5: recompute snapshot hash"]
+    S5 -->|"hash changed"| META["write openwiki/.last-update.json"]
+    S5 -->|"hash unchanged"| CURRENT["no-op: leave metadata untouched"]
+```
+
+Code-mode run lifecycle: the bookkeeping steps around the Step 3 documentation work, including the two no-op exits (`skills/openwiki/SKILL.md` Steps 0–5).
 
 `openwiki-personal` (personal mode) runs the same shape without git: no evidence step or early no-op (upstream's is repository-only), the snapshot/index-sync/metadata root is `~/.openwiki/wiki`, and metadata omits `gitHead` — all matching upstream's local-wiki branches of `utils.ts`. Its wiki goal lives in `~/.openwiki/INSTRUCTIONS.md` (asked once at init), and source-scoped requests follow `references/sources.md`.
 
