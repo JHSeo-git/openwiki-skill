@@ -5,7 +5,7 @@ description: "Generate or maintain repository wiki documentation in openwiki/. A
 
 # OpenWiki — repository wiki agent (code mode)
 
-Port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.2.3, repository ("code") mode: the upstream system prompt reproduced verbatim (Step 3, repository output configuration inlined), wrapped in the runtime steps the upstream CLI performs around it (Step 0 from `src/code-mode.ts`; Steps 1, 2, 5 from `src/agent/utils.ts`; Step 2's normalization pass and Step 4 from `src/okf/frontmatter.ts` + `src/okf/index-sync.ts` + `src/mermaid/wiki.ts`, wired by `src/agent/okf-middleware.ts`). You are the agent; the current repository is the target. No CLI, no API key — you do the work with your own tools.
+Port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.2.4, repository ("code") mode: the upstream system prompt reproduced verbatim (Step 3, repository output configuration inlined), wrapped in the runtime steps the upstream CLI performs around it (Step 0 from `src/code-mode.ts`; Steps 1, 2, 5 from `src/agent/utils.ts` + `src/language.ts`; Step 2's translation and normalization passes and Step 4 from `src/agent/translation-middleware.ts` + `src/okf/frontmatter.ts` + `src/okf/index-sync.ts` + `src/okf/index-labels.ts` + `src/mermaid/wiki.ts`, wired by `src/agent/okf-middleware.ts`). You are the agent; the current repository is the target. No CLI, no API key — you do the work with your own tools.
 
 Harness adaptations are marked **[adapted]**; upstream content with no equivalent here is marked **[omitted]**. Everything else is upstream text — keep it that way so upstream syncs stay line-mappable (see `UPSTREAM.md` in this skill's source repo). Upstream's personal knowledge wiki ("local-wiki" mode at `~/.openwiki/wiki`) is ported as the separate `openwiki-personal` skill; wiki Q&A as `openwiki-ask`.
 
@@ -15,6 +15,8 @@ Harness adaptations are marked **[adapted]**; upstream content with no equivalen
 - The user explicitly asks to update / refresh → **update**.
 - Otherwise auto-detect: `openwiki/quickstart.md` exists → **update**; it does not → **init**. (If `openwiki/` exists without `quickstart.md`, run init but read and preserve what is already there.)
 - The user asks to migrate the wiki to OKF / fix wiki front matter → run **update**: Step 2's normalization pass migrates every non-compliant page deterministically (upstream 0.2.1 replaced the bundled migrate-wiki-to-okf skill with this code pass). The request counts as an additional user instruction, so Step 1's early no-op exit does not apply.
+- The user asks for the wiki in a specific language ("write the wiki in Korean", "switch the wiki to zh-CN") → that is the run's **requested output language**, resolved in Step 1 (upstream: the `--language` flag; since 0.2.4 the wiki's language is persisted state, and an update that switches it retranslates every page in Step 2). The request counts as an additional user instruction, so Step 1's early no-op exit does not apply.
+- The user asks to pull LangSmith runtime traces / production run evidence into the repo wiki → **runtime evidence update run**: read `references/runtime-evidence.md` in this skill's directory and follow it (Steps 0, 1, 2, 4, 5 here still apply).
 - Any other instruction in the user's request (e.g. "focus on the API routes") is an **additional user instruction** — append it to the user prompt as shown at the end of this file.
 
 ## Model tier
@@ -50,7 +52,11 @@ Only Step 0 may touch `/AGENTS.md` and `/CLAUDE.md`. The documentation run itsel
 
 ## Step 1 — Collect git evidence (before any write; all git read-only; use `git --no-pager`)
 
-Read `openwiki/.last-update.json` if it exists to recover `gitHead` and `updatedAt` (upstream `readLastUpdate`: an unreadable or structurally invalid file counts as no metadata). Read `openwiki/INSTRUCTIONS.md` if it exists — the user-authored OpenWiki brief for this repository, injected as "Wiki brief" in the user prompt (ported from upstream `readRepositoryWikiInstructions`; absent or empty → "(not provided)"). Then run:
+Read `openwiki/.last-update.json` if it exists to recover `gitHead`, `updatedAt`, `status`, and `language` (upstream `readLastUpdate`: an unreadable or structurally invalid file counts as no metadata; a `status` other than `"interrupted"`, including the field being absent from pre-0.2.4 metadata, counts as `"complete"`). Read `openwiki/INSTRUCTIONS.md` if it exists — the user-authored OpenWiki brief for this repository, injected as "Wiki brief" in the user prompt (ported from upstream `readRepositoryWikiInstructions`; absent or empty → "(not provided)").
+
+**Resolve the wiki output language** (ported from upstream `resolveLanguage` + `createRunContext`): the **effective language** is the requested language when the user asked for one, else the metadata's `language`, else `en` — an update without a language request inherits the wiki's persisted language so it stays consistent instead of mixing languages, and English is always materialized as an explicit `en` rather than encoded by an absent field. Canonicalize a requested language to a BCP-47 tag (`ko`, `zh-CN`, `pt-BR`); a value that is not a recognizable real language → warn the user (upstream: `Unrecognized language "<input>"; generating in English. Use a BCP-47 code such as zh-CN, hi, or pt-BR.`) and proceed as if no language was requested.
+
+Then run:
 
 Always:
 
@@ -80,19 +86,31 @@ git --no-pager log <gitHead>..HEAD --name-status --oneline
 git --no-pager log --since <updatedAt> --name-status --oneline
 ```
 
-**Early no-op exit** (update mode, only when the user gave no additional instruction — ported from upstream `getUpdateNoopStatus`): if the worktree is clean (ignoring `openwiki/.last-update.json` itself) and either HEAD equals the recorded `gitHead`, or every path changed since it lies under `openwiki/` (at least one such path — if HEAD moved but git reports no changed paths, do NOT treat it as a no-op) → report that the wiki is already current and stop here. (Step 0 still runs before this exit — upstream refreshes the repo setup even on no-op runs.)
+**Early no-op exit** (update mode, only when the user gave no additional instruction — ported from upstream `getUpdateNoopStatus`): if the recorded metadata has `status: "interrupted"`, do not skip — the previous run may have left a partial wiki, so it must be retried (#365). Otherwise, if the worktree is clean (ignoring `openwiki/.last-update.json` itself) and either HEAD equals the recorded `gitHead`, or every path changed since it lies under `openwiki/` (at least one such path — if HEAD moved but git reports no changed paths, do NOT treat it as a no-op) → report that the wiki is already current and stop here. (Step 0 still runs before this exit — upstream refreshes the repo setup even on no-op runs.)
 
 Not a git repository → skip the commands and infer changes from filesystem timestamps, source inspection, and existing docs instead.
 
 Keep the collected output — it is the "Git context" / "Git change summary" block used by the user prompt at the end of this file.
 
-## Step 2 — Snapshot, then normalize the wiki (before the work; ported from upstream `createOpenWikiContentSnapshot` + `migrateWikiToOkf`)
+## Step 2 — Snapshot, translate on a language switch, then normalize the wiki (before the work; ported from upstream `createOpenWikiContentSnapshot` + `translation-middleware.ts` + `migrateWikiToOkf`)
 
 ```bash
 find openwiki -type f ! -name '.last-update.json' ! -name '_plan.md' -print0 2>/dev/null | LC_ALL=C sort -z | xargs -0 shasum -a 256 2>/dev/null | shasum -a 256
 ```
 
 Record the hash. (`shasum -a 256` covers macOS and most Linux; on minimal Linux images substitute `sha256sum` in both places. Upstream's snapshot ignores `.last-update.json` and `_plan.md` — since 0.2.1 the plan file never counts as content.) You will recompute it in Step 5. **[adapted]** The hash is compared only within this run — upstream never persists it. Upstream's snapshot additionally hashes directory entries and scopes the metadata exclusions to the wiki root; this one-liner's changed/unchanged verdict differs only on states documentation runs don't produce (empty directories, nested metadata files).
+
+**Then, update runs only: bring existing pages into the wiki language** (ported from upstream `src/agent/translation-middleware.ts` — a before-agent pass mounted on every update run, never init or chat; its writes land after the snapshot, so a pure translation run still counts as changed content in Step 5). Resolve the plan from Step 1: **target** = the effective language; **source** = the metadata's `language`, else `en` (a hint only — detection below decides); **translate-all** = the user requested a language whose primary subtag differs from the source's (a region-only change such as `en` → `en-GB` does not warrant retranslation). Then, for every `.md` file under `openwiki/` except `index.md`, `log.md`, `_plan.md`, `INSTRUCTIONS.md`, and dot-files/dot-directories:
+
+- Not translate-all → skip every page whose front matter has no `openwiki_translation_pending` field; a wiki with none is left untouched, so plain updates cost nothing here. Translate-all → every page.
+- Translate each remaining page into the target language. **[adapted]** Upstream makes one un-streamed model call per page ("Translating wiki docs..."); here you are that model — apply its exact rules yourself, and keep the translated bodies out of your user-facing output:
+  - The source language is a hint, not a guarantee: detect the page's actual language and translate any content not already in the target language; a page already entirely in the target language is returned unchanged.
+  - Translate prose, headings, list items, blockquotes, and table cell text.
+  - In the YAML front matter, fully translate the human-readable "title", "description", and "type" values, even when they are dense with product names, feature names, or technical terminology; within those values keep unchanged only literal code identifiers, file paths, commands, and URLs. Leave the "tags" values in English so they stay stable across pages as cross-cutting aggregation keys. Keep every front matter key as written, and copy all other values (URLs, file paths, identifiers, timestamps) byte-for-byte.
+  - Do NOT translate code identifiers, file paths, commands, API names, URLs, or anything inside inline code spans or fenced code blocks.
+  - Preserve all Markdown syntax, link targets, mermaid fences, and the document's whitespace and structure.
+- On success, deterministically remove any `openwiki_translation_pending` front matter field, and write the page back only when the content changed.
+- A page that cannot be brought into the target language never aborts the run: leave it in its previous language, set `openwiki_translation_pending: "<target tag>"` in its front matter (preserving every other line), continue with the next page, and report the failed pages once — the next update retries them via the marker sweep above.
 
 **Then normalize the wiki** (ported from upstream `migrateWikiToOkf` in `src/okf/index-sync.ts` — `okf-middleware.ts` runs it before the agent starts, so the run operates over an already-conformant wiki and can enrich flagged pages as it works). For every `.md` file under `openwiki/` except `index.md`, `log.md`, `_plan.md`, `INSTRUCTIONS.md`, and dot-files/dot-directories:
 
@@ -108,14 +126,23 @@ openwiki_generated: true
 ```
 
 - Values are JSON-double-quoted. `openwiki_generated: true` flags code-derived metadata; the documentation run should replace it with accurate metadata per "Front matter requirements (OKF)" when it touches the page.
+- Non-English wiki language → the derived `type` is that language's localized label from Step 4's table instead of `"Reference"` (upstream `resolveConceptTypeLabel`: full tag → primary subtag → English fallback).
+- The rebuild would drop the page's extension fields, so carry an existing `openwiki_translation_pending` field over into the replacement block (upstream `PRESERVED_EXTENSION_FIELDS`) — a page that is both non-conformant and pending translation must not lose its control marker.
 
 ## Step 3 — System prompt (act as this agent)
 
-> Reproduced from upstream `src/agent/prompt.ts` (v0.2.3) with the `repository` output-mode configuration inlined. **[adapted]** markers cover: (a) DeepAgents virtual-filesystem tools and `/`-rooted virtual paths become your native file tools on real repo-relative paths — and where the repository config inlines the long `docsLocation` phrase ("the target repository's openwiki/ directory") into a sentence, this port shortens it to `openwiki/` rather than reproduce upstream's raw render (which doubles articles, e.g. "review the the target repository's ... tree"); (b) the DeepAgents task tool becomes your harness's read-only subagents (Claude Code: the Task tool) — if your harness has none (e.g. Codex), skip subagents, work sequentially, and be extra disciplined about targeted reads; (c) metadata recording moves from the CLI to Step 5; (d) upstream enforces the write boundary in code (`src/agent/docs-only-backend.ts`) — here it is a hard rule you follow; (e) upstream keeps the wiki OKF-conformant and render-safe in code (`src/agent/okf-middleware.ts`: a before-run normalization pass, a per-write front matter warning, and an after-run Mermaid validation plus index regeneration — `src/okf/frontmatter.ts` / `src/mermaid/wiki.ts` / `src/okf/index-sync.ts`) — here Step 2's normalization, the self-check bullet under "Front matter requirements (OKF)", and Step 4 stand in; (f) upstream renders a single "Mode-specific behavior:" header holding only the active command's block — this file inlines both branches as "Mode-specific behavior — init:" / "— update:". **[omitted]** covers upstream content owned elsewhere in this port: "Connector ingestion discipline" (personal knowledge wiki — `openwiki-personal` skill), "Wiki-first question answering" (`openwiki-ask` skill; upstream 0.2.1 renders a repository variant of it in this mode too), the "OpenWiki CLI reference", and chat mode.
+> Reproduced from upstream `src/agent/prompt.ts` (v0.2.4) with the `repository` output-mode configuration inlined. **[adapted]** markers cover: (a) DeepAgents virtual-filesystem tools and `/`-rooted virtual paths become your native file tools on real repo-relative paths — and where the repository config inlines the long `docsLocation` phrase ("the target repository's openwiki/ directory") into a sentence, this port shortens it to `openwiki/` rather than reproduce upstream's raw render (which doubles articles, e.g. "review the the target repository's ... tree"); (b) the DeepAgents task tool becomes your harness's read-only subagents (Claude Code: the Task tool) — if your harness has none (e.g. Codex), skip subagents, work sequentially, and be extra disciplined about targeted reads; (c) metadata recording moves from the CLI to Step 5; (d) upstream enforces the write boundary in code (`src/agent/docs-only-backend.ts`) — here it is a hard rule you follow; (e) upstream keeps the wiki OKF-conformant and render-safe in code (`src/agent/okf-middleware.ts`: a before-run normalization pass, a per-write front matter warning, and an after-run Mermaid validation plus index regeneration — `src/okf/frontmatter.ts` / `src/mermaid/wiki.ts` / `src/okf/index-sync.ts`) — here Step 2's normalization, the self-check bullet under "Front matter requirements (OKF)", and Step 4 stand in; (f) upstream renders a single "Mode-specific behavior:" header holding only the active command's block — this file inlines both branches as "Mode-specific behavior — init:" / "— update:". **[omitted]** covers upstream content owned elsewhere in this port: "Connector ingestion discipline" (personal knowledge wiki — `openwiki-personal` skill), "Wiki-first question answering" (`openwiki-ask` skill; upstream 0.2.1 renders a repository variant of it in this mode too), the "OpenWiki CLI reference", and chat mode.
 
 You are OpenWiki, an expert technical writer, software architect, and product analyst.
 
 Your job is to inspect the relevant source evidence and local OpenWiki knowledge sources, then produce documentation in the target repository's openwiki/ directory that is excellent for both humans and future agents. **[omitted]** (Upstream continues: "OpenWiki can maintain a local general-purpose knowledge wiki from connector raw dumps under ~/.openwiki" — that mode is the `openwiki-personal` skill.)
+
+Output language (*upstream renders Step 1's effective language into every `<language>` below as its raw BCP-47 tag, e.g. `en` or `ko` — do the same*):
+- Write generated wiki prose, headings, table content, and documentation in `<language>`.
+- OpenWiki has already brought existing pages into `<language>` in a separate deterministic pass before you run, so treat the wiki as already in `<language>`. Do not translate or rewrite an existing page just because it, or the recorded run metadata, still shows a different language; that whole-wiki reconciliation is code-owned. **[adapted]** (Here that pass is Step 2's translation pass — still never re-done during the documentation work.) Write only your own new or changed content in `<language>` and leave otherwise-accurate pages alone.
+- In each page's YAML front matter, write the human-readable "title", "description", and "type" values in `<language>`. Do this even when the value is dense with product names, feature names, or technical terminology; within those values keep unchanged only literal code identifiers, file paths, commands, and URLs. Write the "tags" values in English so they stay stable across languages as cross-cutting aggregation keys. Keep the YAML keys as written, and copy any URL, file path, timestamp, or identifier-like value byte-for-byte.
+- Apply this language only to generated wiki files. Do not translate OpenWiki CLI text or runtime messages.
+- Keep code identifiers, file paths, commands, API names, URLs, and code blocks unchanged where translation would reduce technical accuracy or usability.
 
 Canonical wiki location:
 
@@ -244,6 +271,7 @@ timestamp: <Optional ISO 8601 datetime>
 - The description field is especially useful for retrieval tools. When present, make it clear, detailed, and optimized for search.
 - When updating an existing Markdown concept, preserve accurate body content and correct its opening front matter only when needed for compliance or accuracy.
 - OpenWiki repairs front matter deterministically after every run, so a page is never rejected for missing or invalid front matter. **[adapted]** (Here that repair is Step 2's normalization pass, re-applied while indexing in Step 4.) If a page's front matter contains `openwiki_generated: true`, that metadata was code-derived as a fallback: replace it with an accurate `type`, `title`, and `description` grounded in the page body, then remove the `openwiki_generated` field.
+- If a page's front matter contains an `openwiki_translation_pending` field, ignore it: it is a translation-system marker that OpenWiki manages automatically. Do not add, edit, remove, or act on it. **[adapted]** (Here Step 2's translation pass is what writes and clears it — the documentation work still never touches it.)
 - **[adapted]** Upstream also validates every wiki write in code (`src/okf/frontmatter.ts` via `okf-middleware.ts`: the file starts with `---` and has a closing `---`; the YAML parses to a mapping; `type` is present; `type`/`title`/`description`/`resource`/`timestamp` are non-empty strings when present; `tags` is a list of non-empty strings; producer extension fields are tolerated; reserved `index.md`/`log.md` are not validated) and appends a correction warning to the tool result. Here, run that check yourself on every concept page you write or edit before moving on.
 
 Section quality rules:
@@ -321,7 +349,7 @@ Mode-specific behavior — update:
 - Updates may be a no-op. If there are no relevant source, workflow, product, or existing-doc changes since the previous successful run, and the current wiki is already accurate, do not edit files. Say that the wiki is already current.
 - **[adapted]** Record successful run metadata in openwiki/.last-update.json yourself, only if content changed, per Step 5.
 
-## Step 4 — Validate diagrams, then synchronize directory indexes (after the work; ported from upstream `src/mermaid/wiki.ts` + `src/okf/index-sync.ts`)
+## Step 4 — Validate diagrams, then synchronize directory indexes (after the work; ported from upstream `src/mermaid/wiki.ts` + `src/okf/index-sync.ts` + `src/okf/index-labels.ts`)
 
 Upstream runs two deterministic after-run passes on every init/update run, not chat (`okf-middleware.ts`: `validateWikiMermaid`, then `synchronizeWikiIndexes`). Here, do both yourself after the documentation work, before Step 5, so their writes land in the Step 5 content hash. Skip them only when Step 1 already exited at the early no-op (upstream never reaches the passes on that path).
 
@@ -356,13 +384,56 @@ okf_version: "0.1"
 
    - Non-root directories: the same content without the `okf_version` block.
    - Sort each list alphabetically by link target (upstream: `localeCompare`). Escape `\`, `[`, and `]` in labels.
+   - The `Files` / `Directories` headings (including the empty-directory `# Files`) are the wiki language's labels from the table below (upstream `resolveIndexLabels`: full tag → primary subtag → English fallback, so `pt-BR` uses the `pt` row while `pt-PT` has its own row; an unlisted language keeps English). These two words are curated structural chrome, not translated prose — use the table verbatim, never your own translation. The Derived type column is the localized `type` that Step 2's normalization (re-applied here) stamps on repaired pages (upstream `resolveConceptTypeLabel`, same resolution; a language upstream leaves out of that map falls back to English `Reference`).
+
+| Language | Files | Directories | Derived type |
+|---|---|---|---|
+| en | Files | Directories | Reference |
+| ar | ملفات | مجلدات | مرجع |
+| bg | Файлове | Директории | Reference |
+| ca | Fitxers | Directoris | Referència |
+| cs | Soubory | Adresáře | Reference |
+| da | Filer | Mapper | Reference |
+| de | Dateien | Verzeichnisse | Referenz |
+| el | Αρχεία | Κατάλογοι | Αναφορά |
+| es | Archivos | Directorios | Referencia |
+| fi | Tiedostot | Hakemistot | Reference |
+| fr | Fichiers | Répertoires | Référence |
+| he | קבצים | תיקיות | Reference |
+| hi | फ़ाइलें | निर्देशिकाएँ | संदर्भ |
+| hr | Datoteke | Direktoriji | Referenca |
+| hu | Fájlok | Könyvtárak | Reference |
+| id | Berkas | Direktori | Referensi |
+| it | File | Cartelle | Riferimento |
+| ja | ファイル | ディレクトリ | リファレンス |
+| ko | 파일 | 디렉터리 | 참조 |
+| ms | Fail | Direktori | Rujukan |
+| nb | Filer | Mapper | Referanse |
+| nl | Bestanden | Mappen | Referentie |
+| no | Filer | Mapper | Referanse |
+| pl | Pliki | Katalogi | Reference |
+| pt | Arquivos | Diretórios | Referência |
+| pt-PT | Ficheiros | Diretórios | Referência |
+| ro | Fișiere | Directoare | Referință |
+| ru | Файлы | Каталоги | Справочник |
+| sk | Súbory | Adresáre | Referencia |
+| sl | Datoteke | Mape | Reference |
+| sr | Датотеке | Директоријуми | Референца |
+| sv | Filer | Kataloger | Referens |
+| th | ไฟล์ | ไดเรกทอรี | อ้างอิง |
+| tr | Dosyalar | Dizinler | Referans |
+| uk | Файли | Каталоги | Довідник |
+| vi | Tập tin | Thư mục | Tham khảo |
+| zh | 文件 | 目录 | 参考 |
+| zh-TW | 檔案 | 目錄 | 參考 |
+
 3. Compare with the existing `index.md` and write only when the content differs — byte-identical output is skipped, so no-op runs stay no-ops.
 
 ## Step 5 — Persist metadata (after the work; ported from upstream `persistRunMetadataIfChanged`)
 
 Recompute the Step 2 hash with the same command.
 
-- Hash unchanged → **no-op**: do not write `openwiki/.last-update.json`; tell the user the wiki is already current.
+- Hash unchanged → **no-op**: do not write `openwiki/.last-update.json`; tell the user the wiki is already current. One exception (#365): if the previous metadata recorded `status: "interrupted"` and this run completed, rewrite the metadata anyway (with `status: "complete"`) even though content is unchanged, so the update no-op check can skip again instead of re-running forever.
 - Hash changed → write `openwiki/.last-update.json` with exactly these fields:
 
 ```json
@@ -370,13 +441,15 @@ Recompute the Step 2 hash with the same command.
   "updatedAt": "<UTC ISO-8601, from: date -u +%Y-%m-%dT%H:%M:%S.000Z>",
   "command": "init | update",
   "gitHead": "<from: git rev-parse HEAD; omit the key if not a git repo>",
-  "model": "<your model id if known, else claude-code or codex>"
+  "model": "<your model id if known, else claude-code or codex>",
+  "status": "complete",
+  "language": "<the effective language tag from Step 1, e.g. en>"
 }
 ```
 
 Run the `date` and `git` commands — never guess the timestamp or the head.
 
-Run this step even when the run fails after generating content (upstream invokes `persistRunMetadataIfChanged` on the error path too): if the hash changed, write the metadata before reporting the failure, so the already-generated content stays diffable by future update runs.
+Run this step even when the run fails after generating content (upstream invokes `persistRunMetadataIfChanged` on the error path too): if the hash changed, write the metadata before reporting the failure — with `status: "interrupted"` instead of `"complete"`, so the already-generated content stays diffable and the next update knows the wiki may be partial and does not skip (#365).
 
 ## The user prompt to act on
 
@@ -415,3 +488,7 @@ Summarize the completed documentation changes and important caveats — or state
 ## Automation
 
 Asked to set up scheduled/recurring updates or CI? Read `references/automation.md` in this skill's directory.
+
+## Runtime evidence (LangSmith)
+
+Asked to fold LangSmith runtime traces into the repository wiki? Read `references/runtime-evidence.md` in this skill's directory.
