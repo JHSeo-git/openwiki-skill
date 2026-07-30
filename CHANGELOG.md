@@ -1,5 +1,7 @@
 # Changelog
 
+## Unreleased
+
 ## 0.2.4 (2026-07-30)
 
 - Upstream sync: bump pin `1a7c9fe` → `9c253af` (upstream v0.2.4). Multilingual output (#477) ported into both wiki skills: Step 1 resolves an effective wiki language (requested → persisted → explicit `en`; BCP-47 canonicalization with upstream's exact unrecognized-language warning), Step 2 gains the translation pass (`translation-middleware.ts` as an `[adapted]` you-are-the-model pass on update runs — translate-all only when a requested language's primary subtag differs from the persisted one, otherwise a pending-marker-only sweep; per-page failure stamps `openwiki_translation_pending: "<target>"` and never aborts) and normalization now stamps the localized derived `type` and carries `openwiki_translation_pending` across front-matter rebuilds (`PRESERVED_EXTENSION_FIELDS`), Step 3 gains the verbatim "Output language" section (the deterministic-pass line `[adapted]` to Step 2) and the ignore-the-translation-marker front-matter bullet, Step 4 localizes `Files`/`Directories` headings and the derived `type` via upstream's full `index-labels.ts` table (inlined; full tag → primary subtag → English resolution), Step 5 metadata gains `language`; Mode resolution routes explicit language requests as user instructions.
