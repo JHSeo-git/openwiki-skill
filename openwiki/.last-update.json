@@ -1,7 +1,7 @@
 {
-  "updatedAt": "2026-07-30T00:32:01.000Z",
+  "updatedAt": "2026-08-03T12:14:05.000Z",
   "command": "update",
-  "gitHead": "ca2f203a1502eab86f3b93d4cd10320a8291b0a9",
+  "gitHead": "faa4f56f11164d6fe37b0dbd6db402314b88d08c",
   "model": "claude-fable-5",
   "status": "complete",
   "language": "en"
