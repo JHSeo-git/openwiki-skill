@@ -1,5 +1,7 @@
 # Changelog
 
+## Unreleased
+
 ## 0.2.5 (2026-08-03)
 
 - Upstream sync: bump pin `9c253af` → `08280e2` (upstream v0.2.5). `.openwikiignore` (#165) ported into `openwiki` (repository mode only — upstream gives local-wiki runs an inactive ruleset): Step 1 loads and parses the repo-root file (gitignore-compatible semantics: `*`/`**`/`?` globs, leading-`/` anchoring, trailing-`/` directory scoping, `!` negation with last match winning, case-insensitive matching over canonicalized paths so alternate spellings cannot dodge a rule) and filters every git-evidence section through it (a fully filtered section becomes upstream's "(all matching paths are excluded by .openwikiignore)" placeholder); the early no-op exit treats ignored-path changes like `openwiki/`-only changes, so an ignored path changing on its own never forces a rebuild; Step 3 gains upstream's ignore-conditional prompt variants (git-usage sentence, root-glob bullet, a replacement two-bullet "Git discipline") plus the ".openwikiignore discipline" section with the active pattern list — the backend's hard enforcement (ignored reads/edits denied, ls/glob/grep filtered, shell execute allowlisted to `pwd` / `git rev-parse HEAD` / `rm -f ./openwiki/_plan.md`; `src/agent/docs-only-backend.ts`) ported as `[adapted]` prompt discipline.
