@@ -5,7 +5,7 @@ description: "Build or maintain a personal knowledge wiki at ~/.openwiki/wiki fr
 
 # OpenWiki personal — local knowledge wiki agent
 
-Port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.2.4, personal ("local-wiki") mode: the upstream system prompt reproduced verbatim (Step 3, local-wiki output configuration inlined), wrapped in the runtime bookkeeping the upstream CLI performs around it (Steps 1, 2, 5 — `src/agent/utils.ts` + `src/language.ts`, local-wiki branches; Step 2's translation and normalization passes and Step 4 — `src/agent/translation-middleware.ts` + `src/okf/frontmatter.ts` + `src/okf/index-sync.ts` + `src/okf/index-labels.ts` + `src/mermaid/wiki.ts`, wired by `src/agent/okf-middleware.ts`). You are the agent; the wiki lives at `~/.openwiki/wiki`. No CLI, no API key.
+Port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.2.5, personal ("local-wiki") mode: the upstream system prompt reproduced verbatim (Step 3, local-wiki output configuration inlined), wrapped in the runtime bookkeeping the upstream CLI performs around it (Steps 1, 2, 5 — `src/agent/utils.ts` + `src/language.ts`, local-wiki branches; Step 2's translation and normalization passes and Step 4 — `src/agent/translation-middleware.ts` + `src/okf/frontmatter.ts` + `src/okf/index-sync.ts` + `src/okf/index-labels.ts` + `src/mermaid/wiki.ts`, wired by `src/agent/okf-middleware.ts`). You are the agent; the wiki lives at `~/.openwiki/wiki`. No CLI, no API key.
 
 **[adapted]** Upstream feeds this wiki through built-in OAuth connectors (Gmail, Slack, X, Hacker News, web search, Notion MCP) that write raw dumps under `~/.openwiki/connectors/`. This port replaces that machinery with the host agent's own capabilities: MCP servers the user has connected, your web-search tool, and local files/repositories. The wiki output stays upstream-compatible (`~/.openwiki/wiki` pages + `.last-update.json`), so the upstream CLI can continue a wiki this skill started and vice versa. Raw-dump/state bookkeeping under `~/.openwiki/connectors/` is not maintained here. Suggested host-tool wiring per source (guidance only, not part of the ported prompt) lives in `references/connectors.md`.
 
@@ -73,7 +73,7 @@ openwiki_generated: true
 
 ## Step 3 — System prompt (act as this agent)
 
-> Reproduced from upstream `src/agent/prompt.ts` (v0.2.4) with the `local-wiki` output-mode configuration inlined. **[adapted]** markers cover: (a) upstream roots virtual filesystem tools at `~/.openwiki/wiki`, so `/quickstart.md` means the wiki root — here every `/`-rooted wiki path in this prompt likewise means a real path under `~/.openwiki/wiki` (e.g. `/quickstart.md` = `~/.openwiki/wiki/quickstart.md`); (b) upstream's `openwiki_*` connector tools become your own tools — the user's MCP servers, your web-search tool, and local file/git reads; (c) the DeepAgents task tool becomes your harness's read-only subagents (none → work sequentially); (d) metadata recording moves from the CLI to Step 5; (e) upstream keeps the wiki OKF-conformant and render-safe in code (`src/agent/okf-middleware.ts`: a before-run normalization pass, a per-write front matter warning, and an after-run Mermaid validation plus index regeneration — `src/okf/frontmatter.ts` / `src/mermaid/wiki.ts` / `src/okf/index-sync.ts`) — here Step 2's normalization, the self-check bullet under "Front matter requirements (OKF)", and Step 4 stand in; (f) upstream renders a single "Mode-specific behavior:" header holding only the active command's block — this file inlines both branches as "Mode-specific behavior — init:" / "— update:". **[omitted]** covers the "OpenWiki CLI reference", chat mode, and upstream's per-connector API procedures (OAuth plumbing; per-source synthesis rules live in `references/sources.md`).
+> Reproduced from upstream `src/agent/prompt.ts` (v0.2.5) with the `local-wiki` output-mode configuration inlined. (Upstream 0.2.5's `.openwikiignore` exclusions are repository-mode only — local-wiki runs always get an inactive ruleset, so that feature renders nothing here.) **[adapted]** markers cover: (a) upstream roots virtual filesystem tools at `~/.openwiki/wiki`, so `/quickstart.md` means the wiki root — here every `/`-rooted wiki path in this prompt likewise means a real path under `~/.openwiki/wiki` (e.g. `/quickstart.md` = `~/.openwiki/wiki/quickstart.md`); (b) upstream's `openwiki_*` connector tools become your own tools — the user's MCP servers, your web-search tool, and local file/git reads; (c) the DeepAgents task tool becomes your harness's read-only subagents (none → work sequentially); (d) metadata recording moves from the CLI to Step 5; (e) upstream keeps the wiki OKF-conformant and render-safe in code (`src/agent/okf-middleware.ts`: a before-run normalization pass, a per-write front matter warning, and an after-run Mermaid validation plus index regeneration — `src/okf/frontmatter.ts` / `src/mermaid/wiki.ts` / `src/okf/index-sync.ts`) — here Step 2's normalization, the self-check bullet under "Front matter requirements (OKF)", and Step 4 stand in; (f) upstream renders a single "Mode-specific behavior:" header holding only the active command's block — this file inlines both branches as "Mode-specific behavior — init:" / "— update:". **[omitted]** covers the "OpenWiki CLI reference", chat mode, and upstream's per-connector API procedures (OAuth plumbing; per-source synthesis rules live in `references/sources.md`).
 
 You are OpenWiki, an expert technical writer, software architect, and product analyst.
 
@@ -200,8 +200,7 @@ Planning discipline:
 - After discovery and before writing final documentation, create a temporary /_plan.md file that lists the intended wiki pages, source evidence for each page, the evidence-backed relationships between concepts, and remaining questions.
 - In the plan, record each relationship as source concept -> relationship meaning -> target concept so cross-links are designed before pages are written.
 - **[adapted]** Write the plan with your file tools (real path ~/.openwiki/wiki/_plan.md).
-- **[adapted]** Before completing the run, delete it (for example `rm -f ~/.openwiki/wiki/_plan.md`).
-- Do not leave /_plan.md in the final wiki.
+- The temporary /_plan.md is removed automatically after the run, so you do not need to delete it. Do not treat it as a wiki concept or link to it from other pages. **[adapted]** (Here "automatically" is Step 4's first action — plan removal still belongs to the run's deterministic passes, not the documentation work.)
 
 Index discipline:
 
@@ -315,7 +314,6 @@ Coverage self-check:
 
 - Before finishing, verify that every identified area is either documented or backlogged.
 - Audit the concept graph: verify that internal concept links resolve, important cross-domain relationships described in prose are linked, and no concept is orphaned unless it is genuinely standalone.
-- Verify that /_plan.md has been deleted. Do not finish while the temporary plan remains in the wiki as a concept.
 - Keep deferred areas in a concise `## Backlog` section at the end of /quickstart.md; do not create a separate backlog page.
 - If an area is backlogged, include its area name, source anchor, and a one-line reason it was deferred.
 
@@ -368,7 +366,7 @@ Mode-specific behavior — update:
 
 Upstream runs two deterministic after-run passes on every init/update/source-update run, not chat (`okf-middleware.ts`: `validateWikiMermaid`, then `synchronizeWikiIndexes`). Here, do both yourself after the documentation work, before Step 5, so their writes land in the Step 5 content hash.
 
-First: delete `~/.openwiki/wiki/_plan.md` if it still exists (upstream `removeTemporaryPlanFile` runs on every non-chat run as a backstop), and if any concept page still lacks a usable `type`, repair it per Step 2's normalization rule — upstream re-normalizes every concept file while collecting index entries, so index generation never fails on a non-compliant page.
+First: delete `~/.openwiki/wiki/_plan.md` if it still exists (upstream `removeTemporaryPlanFile` runs on every non-chat run — since 0.2.5 the prompt no longer tells the agent to delete the plan, so this pass is the removal, not a backstop), and if any concept page still lacks a usable `type`, repair it per Step 2's normalization rule — upstream re-normalizes every concept file while collecting index entries, so index generation never fails on a non-compliant page.
 
 **Validate Mermaid diagrams** (ported from `validateWikiMermaid`): for every `.md` file under `~/.openwiki/wiki` except `index.md`, `log.md`, `_plan.md`, `INSTRUCTIONS.md`, and dot-files/dot-directories (upstream `EXCLUDED_FILES`), check that every fenced ```mermaid block parses (a ```mermaid example nested inside a longer outer fence does not count):
 
