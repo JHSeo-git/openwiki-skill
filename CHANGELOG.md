@@ -1,5 +1,7 @@
 # Changelog
 
+## Unreleased
+
 ## 0.3.0 (2026-08-04)
 
 - Upstream sync: bump pin `08280e2` → `9a02b35` (upstream v0.3.0). The coding-agent prompt rewrite (#528) restructures both wiki skills: upstream replaced the shared prompt skeleton with per-command templates (`src/agent/prompts/code.ts`/`personal.ts`, rendered by a thin `prompt.ts` template engine), so `openwiki`'s Step 3 now routes to two new line-mapped files — `references/prompt-init.md` and `references/prompt-update.md` — while `openwiki-personal` keeps its single inlined Step 3 (upstream's personal init/update templates differ only in their "Mode-specific behavior" block).
