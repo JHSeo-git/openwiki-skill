@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- README restructured along upstream's layout (content unchanged, redistributed): the feature-blob intro paragraph becomes a "gives you" highlight list, plus "What's new (v0.3.0)", "Quick start" (install → first prompt → keep current), and dedicated "Ignoring paths" sections; Install/Use fold into Quick start/Use.
+- README restructured along upstream's layout (content unchanged, redistributed): a centered lockup header (`static/openwiki-skill-lockup.png` + tagline + badge, mirroring upstream's `static/openwiki-lockup.png` header), the feature-blob intro paragraph becomes a "gives you" highlight list, plus "What's new (v0.3.0)", "Quick start" (install → first prompt → keep current), and dedicated "Ignoring paths" sections; Install/Use fold into Quick start/Use.
 
 ## 0.3.0 (2026-08-04)
 

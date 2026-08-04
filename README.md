@@ -1,8 +1,16 @@
-# openwiki-skill
+<!-- markdownlint-disable MD033 MD041 -->
+
+<div align="center">
+
+<img alt="openwiki-skill" src="./static/openwiki-skill-lockup.png" width="620">
+
+### The self-maintaining wiki, as agent skills.
 
 [![skills.sh](https://skills.sh/b/JHSeo-git/openwiki-skill)](https://skills.sh/JHSeo-git/openwiki-skill)
 
-**The self-maintaining wiki, as agent skills.** Write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.3.0 for coding agents like Claude Code and Codex.
+</div>
+
+Write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.3.0 for coding agents like Claude Code and Codex.
 
 The upstream CLI drives an LLM through provider APIs. This port drops that plumbing: your coding agent already *is* the LLM, with filesystem and git tools attached, so it executes the same workflow directly — the upstream system prompts are reproduced verbatim inside the skills, with harness differences marked `[adapted]`. No API key, no runtime, no configuration.
 
