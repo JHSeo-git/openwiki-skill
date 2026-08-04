@@ -90,6 +90,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
+          # Full history so the update can diff HEAD against the commit it last
+          # documented; a shallow clone hides that commit and the update runs
+          # against an empty change summary.
           fetch-depth: 0
           persist-credentials: true
 
@@ -142,6 +145,11 @@ openwiki_update:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
     - if: '$CI_PIPELINE_SOURCE == "web"'
+  variables:
+    # Full history so the update can diff HEAD against the commit it last
+    # documented; GitLab's default shallow clone hides that commit and the
+    # update runs against an empty change summary.
+    GIT_DEPTH: "0"
   before_script:
     - apt-get update && apt-get install -y git curl
     - npm install --global @anthropic-ai/claude-code
@@ -185,6 +193,11 @@ pipelines:
     openwiki-update:
       - step:
           name: Run OpenWiki update
+          # Full history so the update can diff HEAD against the commit it last
+          # documented; Bitbucket's default shallow clone hides that commit and
+          # the update runs against an empty change summary.
+          clone:
+            depth: full
           script:
             - apt-get update && apt-get install -y git curl
             - npm install --global @anthropic-ai/claude-code

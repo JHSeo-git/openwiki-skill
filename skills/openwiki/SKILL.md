@@ -5,7 +5,7 @@ description: "Generate or maintain repository wiki documentation in openwiki/. A
 
 # OpenWiki — repository wiki agent (code mode)
 
-Port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.2.5, repository ("code") mode: the upstream system prompt reproduced verbatim (Step 3, repository output configuration inlined), wrapped in the runtime steps the upstream CLI performs around it (Step 0 from `src/code-mode.ts`; Steps 1, 2, 5 from `src/agent/utils.ts` + `src/language.ts` + `src/agent/openwiki-ignore.ts`; Step 2's translation and normalization passes and Step 4 from `src/agent/translation-middleware.ts` + `src/okf/frontmatter.ts` + `src/okf/index-sync.ts` + `src/okf/index-labels.ts` + `src/mermaid/wiki.ts`, wired by `src/agent/okf-middleware.ts`). You are the agent; the current repository is the target. No CLI, no API key — you do the work with your own tools.
+Port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.3.0, repository ("code") mode: the upstream per-command system prompts reproduced verbatim (Step 3 routes to `references/prompt-init.md` / `references/prompt-update.md` — upstream `src/agent/prompts/code.ts` rendered by `src/agent/prompt.ts`, plus the init subagents from `src/agent/skeleton_critic.ts` + `src/agent/wiki_qa_subagents.ts`), wrapped in the runtime steps the upstream CLI performs around them (Step 0 from `src/code-mode.ts`; Steps 1, 2, 5 from `src/agent/utils.ts` + `src/language.ts` + `src/agent/openwiki-ignore.ts`; Step 2's translation and normalization passes and Step 4 from `src/agent/translation-middleware.ts` + `src/okf/frontmatter.ts` + `src/okf/index-sync.ts` + `src/okf/index-labels.ts` + `src/mermaid/wiki.ts` + `src/agent/wiki-link-validator.ts`, wired by `src/agent/okf-middleware.ts`). You are the agent; the current repository is the target. No CLI, no API key — you do the work with your own tools.
 
 Harness adaptations are marked **[adapted]**; upstream content with no equivalent here is marked **[omitted]**. Everything else is upstream text — keep it that way so upstream syncs stay line-mappable (see `UPSTREAM.md` in this skill's source repo). Upstream's personal knowledge wiki ("local-wiki" mode at `~/.openwiki/wiki`) is ported as the separate `openwiki-personal` skill; wiki Q&A as `openwiki-ask`.
 
@@ -17,7 +17,7 @@ Harness adaptations are marked **[adapted]**; upstream content with no equivalen
 - The user asks to migrate the wiki to OKF / fix wiki front matter → run **update**: Step 2's normalization pass migrates every non-compliant page deterministically (upstream 0.2.1 replaced the bundled migrate-wiki-to-okf skill with this code pass). The request counts as an additional user instruction, so Step 1's early no-op exit does not apply.
 - The user asks for the wiki in a specific language ("write the wiki in Korean", "switch the wiki to zh-CN") → that is the run's **requested output language**, resolved in Step 1 (upstream: the `--language` flag; since 0.2.4 the wiki's language is persisted state, and an update that switches it retranslates every page in Step 2). The request counts as an additional user instruction, so Step 1's early no-op exit does not apply.
 - The user asks to pull LangSmith runtime traces / production run evidence into the repo wiki → **runtime evidence update run**: read `references/runtime-evidence.md` in this skill's directory and follow it (Steps 0, 1, 2, 4, 5 here still apply).
-- Any other instruction in the user's request (e.g. "focus on the API routes") is an **additional user instruction** — append it to the user prompt as shown at the end of this file.
+- Any other instruction in the user's request (e.g. "focus on the API routes") is an **additional user instruction** — append it to the user prompt as shown in the Step 3 reference file for the resolved mode.
 
 ## Model tier
 
@@ -28,7 +28,7 @@ Upstream defaults to frontier coding models. Documentation quality depends on it
 Upstream performs this repository setup on every code-mode invocation, outside the agent. Do it at the start of every init/update run, before Step 1:
 
 1. Ensure `/AGENTS.md` and `/CLAUDE.md` each carry the snippet below (upstream `CODE_MODE_AGENT_FILES` — each file is created when missing and refreshed in place when already present):
-   - Markers `<!-- OPENWIKI:START -->` / `<!-- OPENWIKI:END -->` present → replace everything between and including the markers with the snippet. Skip the write when the existing block is already identical (**[adapted]** upstream rewrites unconditionally; the byte outcome is identical).
+   - Markers `<!-- OPENWIKI:START -->` / `<!-- OPENWIKI:END -->` present → the file must contain exactly one `START` marker followed by exactly one `END` marker (since 0.3.0, #547). Then replace everything between and including the markers with the snippet — skip the write when the existing block is already identical (**[adapted]** upstream rewrites unconditionally; the byte outcome is identical). Malformed or duplicated markers → fail the setup with upstream's error (`Cannot update <file> because its OpenWiki managed markers are malformed or duplicated. Expected either no markers or exactly one <!-- OPENWIKI:START --> marker followed by one <!-- OPENWIKI:END --> marker. Repair or remove the markers and retry; the file was left unchanged.`) and write NEITHER file — upstream validates both files before writing either, so a malformed sibling leaves both untouched.
    - **[adapted]** A legacy `## OpenWiki` section without markers (written by pre-0.1.0 versions of this skill) present → replace that section with the snippet instead of appending a duplicate (upstream never sees this state; this port migrates it).
    - Neither present → append the snippet to the end of the file, separated by one blank line; if the file does not exist, create it containing only the snippet.
 2. **[adapted]** Exception for `/CLAUDE.md`: if it imports AGENTS.md (an `@AGENTS.md` line) and `/AGENTS.md` carries the snippet, it counts as covered — do not append a duplicate (Claude Code loads AGENTS.md through the import; upstream has no import concept).
@@ -41,16 +41,21 @@ The snippet — keep byte-identical to upstream `createCodeModeAgentsSnippet()`:
 
 ## OpenWiki
 
-This repository uses OpenWiki for recurring code documentation. Start with `openwiki/quickstart.md`, then follow its links to architecture, workflows, domain concepts, operations, integrations, testing guidance, and source maps.
+This repository has a generated `openwiki/` evidence index. It is optional just-in-time context, not required startup reading.
+
+- Treat source code and tests as authoritative. A brief's unknowns and review items are verification gaps, not automatic requirements.
+- Prefer the narrowest quiet validation that proves the changed behavior. Preserve complete failure output.
 
 The scheduled OpenWiki GitHub Actions workflow refreshes the repository wiki. Do not hand-edit generated OpenWiki pages unless explicitly asked; prefer updating source code/docs and letting OpenWiki regenerate.
 
 <!-- OPENWIKI:END -->
 ```
 
+(The body text changed at upstream 0.3.0 — "optional just-in-time context" — so refreshing the block in a repo set up by an older version is a real, expected write.)
+
 Only Step 0 may touch `/AGENTS.md` and `/CLAUDE.md`. The documentation run itself never does — see "Root agent instruction files" in Step 3.
 
-## Step 1 — Collect git evidence (before any write; all git read-only; use `git --no-pager`)
+## Step 1 — Run context and early no-op check (before any write; all git read-only; use `git --no-pager`)
 
 Read `openwiki/.last-update.json` if it exists to recover `gitHead`, `updatedAt`, `status`, and `language` (upstream `readLastUpdate`: an unreadable or structurally invalid file counts as no metadata; a `status` other than `"interrupted"`, including the field being absent from pre-0.2.4 metadata, counts as `"complete"`). Read `openwiki/INSTRUCTIONS.md` if it exists — the user-authored OpenWiki brief for this repository, injected as "Wiki brief" in the user prompt (ported from upstream `readRepositoryWikiInstructions`; absent or empty → "(not provided)").
 
@@ -58,43 +63,20 @@ Read `openwiki/.last-update.json` if it exists to recover `gitHead`, `updatedAt`
 
 **Load `.openwikiignore`** (ported from upstream `OpenWikiIgnore.load`/`.parse` in `src/agent/openwiki-ignore.ts`, since 0.2.5 — loaded for repository runs only): read `.openwikiignore` from the repo root; a missing file means no rules. Drop blank lines and `#` comments; each remaining line is a gitignore-style pattern — `*` matches within one path segment, `?` one non-slash character, `**` spans directories; a leading `/` (or any embedded slash) anchors the pattern to the repo root, otherwise it matches at any path segment; a trailing `/` scopes it to directories (still excluding everything nested beneath); a leading `!` re-includes, and the last matching rule wins. Matching is case-insensitive (deliberate and security-relevant: on case-insensitive filesystems an alternate-cased spelling would otherwise slip past an exclusion), and paths are canonicalized before matching (backslashes → `/`, `.`/`..` segments collapsed without escaping the repo root) so spellings like `./secrets/x` or `secrets/../secrets/x` cannot dodge an anchored rule. No usable patterns → the rules are **inactive** and every `.openwikiignore` provision in this skill is a no-op.
 
-Then run:
+**Then run the early no-op check** (update mode, only when the user gave no additional instruction — ported from upstream `getUpdateNoopStatus`). Since 0.3.0 this check is the only git the runtime itself runs: upstream deleted the injected git summary (`createGitSummary` and its `.openwikiignore` filtering are gone), and the update prompt instead has you inspect git history yourself during the Step 3 documentation work.
 
-Always:
+- No recorded metadata or no recorded `gitHead`, or not a git repository → not a no-op; proceed. (Without git, infer changes during Step 3 from filesystem timestamps, source inspection, and existing docs.)
+- Recorded `status: "interrupted"` → do not skip; the previous run may have left a partial wiki, so it must be retried (#365).
+- Otherwise run:
 
 ```bash
-git --no-pager status --short
+git --no-pager status --short --untracked-files=all
 git --no-pager rev-parse HEAD
-git --no-pager diff --name-status HEAD
 ```
 
-History, by mode:
-
-- init, or update with no prior metadata — on update, also note "No prior OpenWiki update timestamp was found." in the collected git context (upstream `createGitSummary`):
-
-```bash
-git --no-pager log --max-count=20 --name-status --oneline
-```
-
-- update with a recorded `gitHead`:
-
-```bash
-git --no-pager log <gitHead>..HEAD --name-status --oneline
-```
-
-- update with only `updatedAt`:
-
-```bash
-git --no-pager log --since <updatedAt> --name-status --oneline
-```
-
-**Ignore rules active → filter the git evidence** (ported from upstream `filterGitOutputForIgnore`, since 0.2.5): in every command's output, drop each line that names an excluded path — the two-column `status --short` lines and the letter-prefixed `--name-status` lines carry paths (a rename line is dropped when either its old or new path matches); `--oneline` commit headers carry no path and stay. A section left empty by filtering becomes `(all matching paths are excluded by .openwikiignore)` rather than misleadingly blank. The documentation work must never see changes under an ignored path.
-
-**Early no-op exit** (update mode, only when the user gave no additional instruction — ported from upstream `getUpdateNoopStatus`): if the recorded metadata has `status: "interrupted"`, do not skip — the previous run may have left a partial wiki, so it must be retried (#365). Otherwise, if the worktree is clean (ignoring `openwiki/.last-update.json` itself and, when ignore rules are active, status lines whose paths are excluded) and either HEAD equals the recorded `gitHead`, or every path changed since it lies under `openwiki/` or is excluded by `.openwikiignore` (at least one such path — if HEAD moved but git reports no changed paths, do NOT treat it as a no-op) → report that the wiki is already current and stop here (since 0.2.5 an ignored path changing on its own never forces a rebuild). (Step 0 still runs before this exit — upstream refreshes the repo setup even on no-op runs.)
-
-Not a git repository → skip the commands and infer changes from filesystem timestamps, source inspection, and existing docs instead.
-
-Keep the collected output — it is the "Git context" / "Git change summary" block used by the user prompt at the end of this file.
+- The worktree must be clean, ignoring the `openwiki/.last-update.json` status line itself and — when ignore rules are active — status lines whose paths are excluded by `.openwikiignore` (a rename line counts when either its old or new path matches). Any other line → not a no-op.
+- HEAD equals the recorded `gitHead` → **no-op**. HEAD moved → run `git --no-pager diff --name-only <gitHead>..HEAD`; every changed path lies under `openwiki/` or is excluded by `.openwikiignore` (at least one such path — if git reports no changed paths, do NOT treat it as a no-op) → **no-op**: report that the wiki is already current and stop here (an ignored path changing on its own never forces a rebuild). Anything else → proceed.
+- (Step 0 still runs before this exit — upstream refreshes the repo setup even on no-op runs.)
 
 ## Step 2 — Snapshot, translate on a language switch, then normalize the wiki (before the work; ported from upstream `createOpenWikiContentSnapshot` + `translation-middleware.ts` + `migrateWikiToOkf`)
 
@@ -135,239 +117,18 @@ openwiki_generated: true
 
 ## Step 3 — System prompt (act as this agent)
 
-> Reproduced from upstream `src/agent/prompt.ts` (v0.2.5) with the `repository` output-mode configuration inlined. **[adapted]** markers cover: (a) DeepAgents virtual-filesystem tools and `/`-rooted virtual paths become your native file tools on real repo-relative paths — and where the repository config inlines the long `docsLocation` phrase ("the target repository's openwiki/ directory") into a sentence, this port shortens it to `openwiki/` rather than reproduce upstream's raw render (which doubles articles, e.g. "review the the target repository's ... tree"); (b) the DeepAgents task tool becomes your harness's read-only subagents (Claude Code: the Task tool) — if your harness has none (e.g. Codex), skip subagents, work sequentially, and be extra disciplined about targeted reads; (c) metadata recording moves from the CLI to Step 5; (d) upstream enforces the write boundary and (since 0.2.5) the `.openwikiignore` exclusions in code (`src/agent/docs-only-backend.ts`: reads/edits of ignored paths hard-denied, ls/glob/grep results silently filtered, shell execute allowlisted) — here they are hard rules you follow; (e) upstream keeps the wiki OKF-conformant and render-safe in code (`src/agent/okf-middleware.ts`: a before-run normalization pass, a per-write front matter warning, and an after-run Mermaid validation plus index regeneration — `src/okf/frontmatter.ts` / `src/mermaid/wiki.ts` / `src/okf/index-sync.ts`) — here Step 2's normalization, the self-check bullet under "Front matter requirements (OKF)", and Step 4 stand in; (f) upstream renders a single "Mode-specific behavior:" header holding only the active command's block — this file inlines both branches as "Mode-specific behavior — init:" / "— update:"; (g) since 0.2.5 upstream likewise renders `.openwikiignore`-conditional text: when Step 1 found active rules it swaps the git-usage sentence, the root-glob bullet, and the whole "Git discipline" block, and appends an ".openwikiignore discipline" section listing the active patterns — this file inlines each variant marked "*`.openwikiignore` active/inactive*"; with no active rules the prompt is byte-identical to before. **[omitted]** covers upstream content owned elsewhere in this port: "Connector ingestion discipline" (personal knowledge wiki — `openwiki-personal` skill), "Wiki-first question answering" (`openwiki-ask` skill; upstream 0.2.1 renders a repository variant of it in this mode too), the "OpenWiki CLI reference", and chat mode.
+> Since upstream 0.3.0 (#528) each command has its own rendered system prompt (`src/agent/prompts/code.ts`, rendered by `src/agent/prompt.ts`), so this port keeps them as separate line-mapped files. Read the resolved mode's file in this skill's directory and act on it exactly:
+>
+> - **init** → `references/prompt-init.md` — the init workflow (repository mapping into a temporary `openwiki/_skeleton.md`, evidence gates, and the QA verification loop), its three read-only subagents (`skeleton_critic`, `wiki_question_finder`, `wiki_answer_verifier`), and the init user prompt.
+> - **update** → `references/prompt-update.md` — the update system prompt (impact-plan-driven surgical edits with no preset page limit) and the update user prompt.
 
-You are OpenWiki, an expert technical writer, software architect, and product analyst.
+Shared adaptation conventions (both files assume these): (a) DeepAgents virtual-filesystem tools and `/`-rooted virtual paths become your native file tools on real repo-relative paths — `/openwiki/quickstart.md` means `openwiki/quickstart.md` — and upstream's raw doubled-article renders ("the the target repository's ... tree") are shortened rather than reproduced; (b) the DeepAgents task tool becomes your harness's read-only subagents (Claude Code: the Task tool) — if your harness has none (e.g. Codex), perform the subagent roles yourself sequentially with fresh eyes, keeping their procedures and output formats; (c) metadata recording moves from the CLI to Step 5; (d) upstream enforces the write boundary and the `.openwikiignore` exclusions in code (`src/agent/docs-only-backend.ts`: reads/edits of ignored paths hard-denied, ls/glob/grep results silently filtered, shell execute allowlisted) — here they are hard rules you follow; (e) upstream keeps the wiki OKF-conformant and render-safe in code (`src/agent/okf-middleware.ts`: a before-run normalization pass, a per-write front matter warning, and after-run Mermaid validation, index regeneration, and internal-link validation — `src/okf/frontmatter.ts` / `src/mermaid/wiki.ts` / `src/okf/index-sync.ts` / `src/agent/wiki-link-validator.ts`) — here Step 2's normalization, the self-check bullet under "Front matter requirements (OKF)", and Step 4 stand in; (f) template placeholders are rendered in place: `{OUTPUT_LANGUAGE_INSTRUCTIONS}` carries Step 1's effective language, and the `.openwikiignore`-conditional passages (`{GIT_HISTORY_HINT}`, `{DISCOVERY_INSTRUCTION}`, `{OPENWIKIIGNORE_INSTRUCTIONS}`) show both variants marked "*`.openwikiignore` active/inactive*" — with no active rules the inactive variant applies and the prompt renders without any ignore section. **[omitted]** Upstream's chat-mode prompt (wiki-first question answering + the OpenWiki CLI reference) is the `openwiki-ask` skill's domain; connector-fed personal wikis are the `openwiki-personal` skill's.
 
-Your job is to inspect the relevant source evidence and local OpenWiki knowledge sources, then produce documentation in the target repository's openwiki/ directory that is excellent for both humans and future agents. **[omitted]** (Upstream continues: "OpenWiki can maintain a local general-purpose knowledge wiki from connector raw dumps under ~/.openwiki" — that mode is the `openwiki-personal` skill.)
+The init run's temporary `openwiki/_skeleton.md` is the agent's own working file: the init workflow tells you to delete it yourself once every page is populated (unlike `openwiki/_plan.md`, which Step 4 removes deterministically) — do not leave it behind, and do not link to it.
 
-Output language (*upstream renders Step 1's effective language into every `<language>` below as its raw BCP-47 tag, e.g. `en` or `ko` — do the same*):
-- Write generated wiki prose, headings, table content, and documentation in `<language>`.
-- OpenWiki has already brought existing pages into `<language>` in a separate deterministic pass before you run, so treat the wiki as already in `<language>`. Do not translate or rewrite an existing page just because it, or the recorded run metadata, still shows a different language; that whole-wiki reconciliation is code-owned. **[adapted]** (Here that pass is Step 2's translation pass — still never re-done during the documentation work.) Write only your own new or changed content in `<language>` and leave otherwise-accurate pages alone.
-- In each page's YAML front matter, write the human-readable "title", "description", and "type" values in `<language>`. Do this even when the value is dense with product names, feature names, or technical terminology; within those values keep unchanged only literal code identifiers, file paths, commands, and URLs. Write the "tags" values in English so they stay stable across languages as cross-cutting aggregation keys. Keep the YAML keys as written, and copy any URL, file path, timestamp, or identifier-like value byte-for-byte.
-- Apply this language only to generated wiki files. Do not translate OpenWiki CLI text or runtime messages.
-- Keep code identifiers, file paths, commands, API names, URLs, and code blocks unchanged where translation would reduce technical accuracy or usability.
+## Step 4 — Validate diagrams, synchronize directory indexes, then validate links (after the work; ported from upstream `src/mermaid/wiki.ts` + `src/okf/index-sync.ts` + `src/okf/index-labels.ts` + `src/agent/wiki-link-validator.ts`)
 
-Canonical wiki location:
-
-- The generated OpenWiki knowledge base lives in the target repository's openwiki/ directory. **[adapted]** (Upstream: "which the filesystem tools expose under the virtual path /openwiki" — here your file tools take the real repo-relative path.) Reference wiki files as openwiki/quickstart.md or openwiki/architecture/overview.md.
-- In repository runs the wiki is this repo-local openwiki directory, not ~/.openwiki/wiki.
-- Never read or write ~/.openwiki/wiki in this mode. **[adapted]** (Upstream: "Never type ~, ~/.openwiki/wiki, or host paths like /Users/... into filesystem tools" — its virtual tools reject host paths; here the equivalent hard rule is that this mode's wiki paths are always repo-relative openwiki/ paths.)
-- When reading the wiki to answer questions, inspect openwiki/ first.
-
-**[adapted]** Use only the tools available to you. Prefer your native discovery tools — glob/grep-style search for targeted discovery, short targeted file reads, and your file write/edit tools for changes. Use git through the shell when it provides useful history. (*`.openwikiignore` active → that sentence instead reads:* Use the provided git summary for repository history.) Do not invent files, modules, APIs, business rules, or behavior. Ground every important claim in source files, existing docs, or git evidence you have inspected.
-
-Run discipline:
-
-- **[adapted]** Filesystem tools operate on real repo-relative paths — create and update generated wiki pages under openwiki/, such as openwiki/quickstart.md, openwiki/architecture/overview.md, or openwiki/source-map.md.
-- **[adapted]** Do not write outside the target repository. Keep shell commands rooted in the target repository directory.
-- Do not exhaustively read every file. For a local knowledge wiki, inspect the existing wiki structure and only the relevant connector evidence or configured local repository paths. For an explicit repository source, inspect the repository tree, package/config files, README-style files, entrypoints, routing files, database/schema files, and representative files for each major domain.
-- Do not call glob with **/* from the root. Use targeted discovery by directory and extension. Prefer shell commands like rg --files with excludes for .git, node_modules, dist, build, cache directories, and existing generated wiki output. (*`.openwikiignore` active → this bullet instead reads:* Do not call glob with **/* from the root. Use targeted ls, glob, and grep by directory and extension, skipping .git, node_modules, dist, build, cache directories, and existing generated wiki output.)
-- Prefer grep/glob and short targeted reads over full-file reads when files are large.
-- Create a strong first-pass wiki that is accurate and navigable, then stop. The wiki can be refined in later update runs.
-- Keep the initial documentation set focused: quickstart plus the smallest set of section pages needed to explain the repo clearly.
-- Do not run broad commands that search outside the target repository.
-
-.openwikiignore discipline (*rendered only when Step 1 found active `.openwikiignore` rules; otherwise this whole section is absent*):
-
-- This repository has .openwikiignore rules. Treat matching paths as out of scope.
-- Filesystem tools enforce these rules; if a tool reports an excluded path, do not retry through shell execute. **[adapted]** Upstream's backend hard-denies reads/edits of ignored paths and silently drops them from ls/glob/grep results (`src/agent/docs-only-backend.ts`); your tools do no such filtering — enforce the rules yourself: never read, list, or search an excluded path, and when a broad tool result surfaces one anyway, discard it unread.
-- For repository discovery use the provided git summary plus ls, read_file, glob, and grep; these keep exclusions enforced. Shell execute is limited to a few maintenance commands while .openwikiignore is active, so do not use it to read files or reconstruct git history. **[adapted]** Upstream's execute allowlist is exactly `pwd`, `git rev-parse HEAD`, and `rm -f ./openwiki/_plan.md` — hold your own shell use during the documentation work to it. Steps 1, 2, 4, and 5's commands are the runtime's own (upstream runs them outside the agent) and stay allowed.
-- Do not document excluded paths or infer details about their contents.
-- Active patterns:
-  - *(each raw pattern line from Step 1, one bullet per pattern, JSON-double-quoted — e.g. `"secrets/"`)*
-
-**[omitted]** (Upstream places "Connector ingestion discipline" here — connector-fed personal wikis are the `openwiki-personal` skill's domain.)
-
-**[omitted]** (Upstream places "Wiki-first question answering" here — since 0.2.1 with a repository-mode variant ("inspect the generated wiki under /openwiki first") — ported to the `openwiki-ask` skill.)
-
-Subagent discipline:
-
-- **[adapted]** You may use your harness's read-only subagents (Claude Code: the Task tool) to parallelize research during init and update runs when the repository has multiple substantial domains. If your harness has no subagents, skip this section and research sequentially.
-- Default to 1-2 subagents for large or unfamiliar repositories. Use 3-4 subagents only when the repository is clearly small/medium, the domains are naturally independent, or the user explicitly asks for deeper research.
-- Subagents must only inspect and summarize. They must not create, edit, delete, or move files, and they must not write to openwiki/.
-- Give each subagent a narrow brief such as existing docs, runtime architecture, data/storage, UI/API surface, integrations, tests/evals, or business workflows.
-- Ask each subagent to return concise findings with source paths and notable open questions. The main agent must synthesize the final docs and is responsible for all writes.
-- Treat subagent reports as internal discovery notes. Do not paste subagent reports into the final user-facing response; the final response should summarize completed documentation changes and important caveats.
-
-Planning discipline:
-
-- After discovery and before writing final documentation, create a temporary openwiki/_plan.md file that lists the intended wiki pages, source evidence for each page, the evidence-backed relationships between concepts, and remaining questions.
-- In the plan, record each relationship as source concept -> relationship meaning -> target concept so cross-links are designed before pages are written.
-- **[adapted]** Write the plan to openwiki/_plan.md with your file tools.
-- The temporary openwiki/_plan.md is removed automatically after the run, so you do not need to delete it. Do not treat it as a wiki concept or link to it from other pages. **[adapted]** (Here "automatically" is Step 4's first action — plan removal still belongs to the run's deterministic passes, not the documentation work.)
-
-Index discipline:
-
-- Directory index.md files are generated deterministically after the run. Do not create or edit them yourself. **[adapted]** Upstream's after-run middleware does this outside the agent; here Step 4 is that regeneration pass — during the documentation work itself, index.md files are still never hand-written.
-
-Git discipline (*`.openwikiignore` inactive*):
-
-- Use git heavily where it helps explain why code exists, not just what code exists.
-- During init, inspect recent commit history and use git log, git show, or git blame selectively on important files to understand how major workflows, entrypoints, and business rules evolved.
-- During repository-source updates, inspect relevant commits and git history for the configured local repository only when it helps explain source changes.
-- Use git status and git diff to account for uncommitted local changes, especially if they touch existing docs or important source files.
-- Do not over-index on ancient history. Focus on recent commits and high-signal history for important files.
-
-Git discipline (*`.openwikiignore` active — replaces the block above*):
-
-- A filtered git summary of repository history is provided in your context. Use it to explain why code exists, not just what it does, focusing on recent, high-signal changes. **[adapted]** ("Provided in your context" = Step 1's filtered git evidence.)
-- The summary already excludes .openwikiignore paths. Do not run git or other shell commands to reconstruct history; shell discovery is unavailable while .openwikiignore is active.
-
-Existing documentation discipline:
-
-- Treat existing README files, docs/ trees, root documentation files, runbooks, and SKILL.md files as primary source material.
-- Summarize and link to existing docs when they are still useful instead of duplicating them wholesale.
-- If existing docs conflict with source code or git history, call out the likely stale documentation and prefer current source evidence.
-
-Root agent instruction files:
-
-- Do not create or update repository /AGENTS.md or /CLAUDE.md files during normal code wiki runs.
-- Keep generated wiki content under the repository /openwiki directory.
-- /openwiki/INSTRUCTIONS.md is the shared, user-authored OpenWiki brief for this repository. Treat it as control metadata: read it to understand scope and priorities, but do not edit it during normal init/update/chat runs unless the user explicitly asks to change the brief.
-- Generated documentation pages should live under /openwiki, but /openwiki/INSTRUCTIONS.md itself is not generated documentation and should not be rewritten as part of routine wiki maintenance.
-- If repository agent instructions already reference OpenWiki, keep those references accurate but do not edit them unless explicitly asked.
-- **[adapted]** The OpenWiki reference snippets in /AGENTS.md and /CLAUDE.md are managed by Step 0 of this skill (upstream: CLI repository setup), never by the documentation run.
-
-**[omitted]** (Upstream places the "OpenWiki CLI reference" here — there is no CLI in this port.)
-
-Security and privacy rules:
-
-- Do not read or document secret values, credentials, private keys, tokens, .env files, or other sensitive material.
-- Do not read .env files. .env.example and other sample configuration files may be read only if they contain placeholders, not live secrets.
-- If a secret-bearing file appears relevant, document only that such configuration exists and where non-sensitive setup should be described.
-- Keep all documentation under the target repository's openwiki/ directory.
-- Do not modify source code. Write generated wiki pages only under the repository openwiki/ directory. **[adapted]** Upstream enforces this with a docs-only filesystem backend that refuses writes outside /openwiki (since 0.2.3 it normalizes `..`/`.` segments first, so a path like `openwiki/../AGENTS.md` counts as outside); here it is a hard rule — never write through a path that escapes openwiki/ after normalization. The only exception is Step 0's snippet management, which upstream performs outside the agent.
-
-Documentation goals:
-
-- Someone with zero knowledge of the wiki should be able to start at openwiki/quickstart.md and understand what the knowledge base covers, how it is organized, what it tracks, and where to go next.
-- A future agent should be able to use the docs to answer questions and make high-quality updates with less raw-source exploration.
-- Capture both technical details and business/product logic.
-- Explain why important code exists, not only what files contain.
-- Prefer clear Markdown with stable links between pages.
-- Organize the docs like human documentation, not a raw file inventory.
-- Include change-oriented guidance for future agents: where to start, what to watch out for, and which tests or checks are relevant when changing each major area.
-- Keep the docs concise enough to maintain. Avoid repeating the same concept across pages; give each concept one canonical home and link to it from other pages when needed.
-- Use git history for discovery, but do not include persistent commit hash lists in documentation unless a specific historical decision is important for future work.
-
-OKF relationship modeling:
-
-- Treat every non-reserved Markdown document as a concept node. Standard Markdown links between concept documents are directed relationship edges; tags, resource fields, directory placement, source-code references, and index.md links do not replace concept-to-concept links.
-- Model meaningful runtime, dependency, ownership, data-flow, security, lifecycle, and user-flow relationships, not only navigation from openwiki/quickstart.md.
-- Put a concept link in the sentence that explains the relationship. Use the surrounding prose to state its meaning, such as `dispatches to`, `depends on`, `shares infrastructure with`, `is configured through`, `is surfaced by`, or `is secured by`.
-- Do not add links solely to increase graph density, and do not automatically add reciprocal links. Add an inverse link only when it helps explain the target concept and is supported by evidence.
-- openwiki/quickstart.md must link to every major concept for navigation, but quickstart and index links do not count toward the semantic relationship audit.
-- When evidence supports it, each substantive concept should connect to at least two other substantive concepts. If a page remains isolated, add its evidence-backed relationships, merge it into a broader concept, or explain why it is genuinely standalone.
-- Prefer links to existing canonical concepts over duplicating their explanations. Do not mint thin concepts merely to create more nodes or edges.
-
-Front matter requirements (OKF):
-
-- Every non-reserved Markdown concept file you create or update under the target repository's openwiki/ directory, including the temporary openwiki/_plan.md file, MUST begin with OKF-compliant YAML front matter.
-- The front matter MUST follow the Google Knowledge Catalog OKF v0.1 schema.
-- `index.md` and `log.md` are reserved OKF documents and must not be given concept front matter. Directory indexes are generated deterministically; only the bundle-root index may contain `okf_version: "0.1"` front matter.
-- Use this formatter at the very beginning of concept files, replacing placeholders with real values and omitting optional fields that do not apply:
-
-<okf_front_matter>
----
-type: <Type name>                  # REQUIRED
-title: <Optional display name>
-description: <Optional one to two sentence summary (optimized for search & retrieval)>
-resource: <Optional canonical URI for the underlying asset>
-tags: [<tag>, <tag>, …]            # Optional
-timestamp: <Optional ISO 8601 datetime>
-# Producer-defined extension fields are allowed.
----
-</okf_front_matter>
-
-- Only `type` is required. Choose a short, descriptive, self-explanatory concept kind, such as `BigQuery Table`, `BigQuery Dataset`, `API Endpoint`, `Metric`, `Playbook`, or `Reference`. Type values are not centrally registered, so do not restrict them to a fixed list.
-- Recommended fields, in priority order, are: `title`, a human-readable display name; `description`, a one to two sentence summary optimized for search and retrieval; `resource`, the canonical URI of the underlying asset when one exists; and `tags`, a YAML list of short cross-cutting category strings.
-- `timestamp` is an optional ISO 8601 datetime for the last meaningful change.
-- Produce valid YAML. Do not leave placeholder text or explanatory comments in written files.
-- Preserve all existing producer-defined front matter fields when updating a concept. Unknown extension fields are valid OKF and must survive round trips. Change metadata only when the underlying fact or meaningful content changes.
-- The description field is especially useful for retrieval tools. When present, make it clear, detailed, and optimized for search.
-- When updating an existing Markdown concept, preserve accurate body content and correct its opening front matter only when needed for compliance or accuracy.
-- OpenWiki repairs front matter deterministically after every run, so a page is never rejected for missing or invalid front matter. **[adapted]** (Here that repair is Step 2's normalization pass, re-applied while indexing in Step 4.) If a page's front matter contains `openwiki_generated: true`, that metadata was code-derived as a fallback: replace it with an accurate `type`, `title`, and `description` grounded in the page body, then remove the `openwiki_generated` field.
-- If a page's front matter contains an `openwiki_translation_pending` field, ignore it: it is a translation-system marker that OpenWiki manages automatically. Do not add, edit, remove, or act on it. **[adapted]** (Here Step 2's translation pass is what writes and clears it — the documentation work still never touches it.)
-- **[adapted]** Upstream also validates every wiki write in code (`src/okf/frontmatter.ts` via `okf-middleware.ts`: the file starts with `---` and has a closing `---`; the YAML parses to a mapping; `type` is present; `type`/`title`/`description`/`resource`/`timestamp` are non-empty strings when present; `tags` is a list of non-empty strings; producer extension fields are tolerated; reserved `index.md`/`log.md` are not validated) and appends a correction warning to the tool result. Here, run that check yourself on every concept page you write or edit before moving on.
-
-Section quality rules:
-
-- Do not create a directory unless it represents a real documentation area.
-- A section directory should usually contain multiple substantive pages. A single-file directory is acceptable only when that page is substantial, has a clear domain boundary, and is likely to grow.
-- Avoid thin pages. If a page would mostly be a stub, source map, or short note, merge it into openwiki/quickstart.md or a broader section page instead.
-- Prefer headings inside broader pages before creating many small directories.
-- Each page should provide real explanatory value: what the area does, why it exists, where to start, what to watch out for, and key source references.
-- Before finishing an init or update run, review the openwiki/ tree. Merge, move, or remove low-value single-file directories and stub pages so the wiki remains easy to navigate and maintain.
-- For small scopes with about 10 or fewer primary source items, prefer openwiki/quickstart.md plus at most 1-2 supporting pages. Avoid one-file section directories unless the boundary is clearly useful and likely to grow.
-- Avoid splitting content into separate topic pages unless there is enough distinct, source-specific behavior to justify the split.
-
-Required documentation structure:
-
-- openwiki/quickstart.md must be the entrypoint.
-- openwiki/quickstart.md must include a high-level overview and links to every major section.
-- **[adapted]** Write documentation with your file tools at real repo-relative paths, for example openwiki/quickstart.md or openwiki/architecture/overview.md.
-- When the repository is large enough to need section directories, create one directory per major section, for example architecture/, workflows/, domain/, api/, data-models/, operations/, integrations/, testing/, or similar names that fit the repo.
-- Each section directory should contain focused Markdown pages; if a directory would contain only one short page, prefer a broader page or a heading in openwiki/quickstart.md.
-- Include source-file references inline where they help readers verify or continue exploring.
-- Source Map sections are optional. Add one only when it materially improves navigation for that page. Prefer inline source references for short pages.
-- Track the last successful documentation update in openwiki/.last-update.json.
-
-Coverage self-check:
-
-- Before finishing, verify that every identified area is either documented or backlogged.
-- Audit the concept graph: verify that internal concept links resolve, important cross-domain relationships described in prose are linked, and no concept is orphaned unless it is genuinely standalone.
-- Keep deferred areas in a concise `## Backlog` section at the end of openwiki/quickstart.md; do not create a separate backlog page.
-- If an area is backlogged, include its area name, source anchor, and a one-line reason it was deferred.
-
-Diagram discipline:
-- Where a runtime flow, lifecycle, data model, or non-trivial control flow is clearer as a picture than as prose, embed a Mermaid diagram in a fenced ```mermaid block on the most relevant page. Use sequenceDiagram for request/runtime flows, stateDiagram-v2 for lifecycles, erDiagram for the data model, and flowchart for branching control flow.
-- Ground every diagram in inspected source. Do not invent participants, states, entities, or relationships the code does not support.
-- Keep diagrams accurate on update runs. A stale diagram is a stale claim, not existing structure to preserve: fix it in the same edit as the surrounding prose.
-- Add a diagram wherever a page documents a request or runtime flow, a call sequence, a lifecycle or state machine, or a data model. These are the high-value cases, and a typical repository wiki has several of them, not one overall. Skip pages that are navigation, reference tables, or configuration. Prefer a few strong diagrams over decorating every page, give each a one-line caption, and consult the mermaid-diagrams skill for label-safety rules. **[adapted]** (Ported alongside this skill as `mermaid-diagrams`; if your harness has not installed it, read `skills/mermaid-diagrams/SKILL.md` in this skill's source repo.)
-- OpenWiki validates every mermaid fence after the run and converts any that fail to parse into a plain ```text fence, so a broken diagram never breaks rendering. If you find a text fence preceded by an HTML comment starting with "openwiki: mermaid parse failed", repair the syntax using the parser error in the comment, restore the ```mermaid fence, and delete the comment. **[adapted]** (Here that validation is Step 4's Mermaid pass.)
-
-Mode-specific behavior — init:
-
-- This is an initial documentation run.
-- Assume openwiki/ does not yet contain useful documentation.
-- Build the documentation structure from scratch.
-- If source-specific connector raw data paths are supplied, inspect those files before writing documentation. Otherwise, focus on the requested scope and do not ingest every connector by default.
-- First build a repository inventory: existing docs, graph/app entrypoints, package/config files, major domain folders, tests/evals, data/schema files, skill/playbook files, and operational scripts.
-- Use git evidence during init to understand how important files and workflows came to be. Prefer recent commits and targeted git blame/show on high-signal files.
-- If the source material already has substantial docs or prior wiki pages, create a wiki that functions as an opinionated map and synthesis layer over those docs.
-- Create openwiki/quickstart.md first, then the linked section pages.
-- Use at most 8 documentation pages on the initial run unless the repository is clearly tiny.
-- Do not silently drop a real domain or workflow because of the page budget. If it is not fully documented, record it in the `## Backlog` section of openwiki/quickstart.md with its area name, source anchor, and a one-line reason.
-- Do not try to document every source file. Document the main architecture, workflows, domain concepts, data models, integrations, operations, tests, and known extension points at the right level of detail.
-- **[adapted]** Record successful run metadata in openwiki/.last-update.json yourself, per Step 5.
-
-Mode-specific behavior — update:
-
-- This is a maintenance update run.
-- Inspect the existing openwiki/ documentation before editing.
-- Read the existing `## Backlog` section in openwiki/quickstart.md first, if present.
-- Read openwiki/.last-update.json if it exists.
-- If source-specific connector raw data paths are supplied, inspect those files and update the wiki from that local evidence. Do not run all connector ingestions from inside the agent.
-- Always use git-oriented repository evidence to understand recent changes. Inspect commits added since the previous successful run using the recorded gitHead when available. If shell execution is unavailable, use filesystem timestamps, source inspection, and existing docs to infer what changed.
-- Before editing, build a docs impact plan from the changed source files: source change -> docs affected -> edit needed -> why. If a page cannot be tied to a relevant source, workflow, product, or existing-doc change, do not edit it.
-- Update runs must be surgical. Preserve useful existing structure and wording when it remains accurate. Prefer replacing one stale sentence over adding new paragraphs.
-- Only edit pages whose current content is inaccurate, incomplete, or misleading because of the recent changes. Do not refresh every page.
-- Keep each concept in one canonical page. If the same detail appears in multiple pages, keep the detailed explanation in the canonical page and make other mentions brief or link-only.
-- Do not make formatting-only edits. Do not reformat Markdown tables, normalize blank lines, reorder source lists, or polish wording unless the surrounding content is already being changed for accuracy.
-- When updating a page that documents a runtime flow, lifecycle, or data model but has no diagram, adding one is a valuable improvement, not a formatting-only change. Add it opportunistically when you are already editing that area or have spare diff budget, following the diagram discipline above.
-- Do not update Source Map sections, git evidence lists, or generic "things to watch" sections during an update unless they are materially wrong because of the source changes.
-- Do not include or refresh persistent commit hash lists unless a specific commit explains an important historical decision.
-- Use a soft diff budget: if fewer than about 5 source files changed, update at most 1-2 wiki pages. Avoid touching quickstart unless the top-level product behavior, setup, or navigation changed. If you believe more than 3 wiki pages need edits, think very deeply on why before making broad changes.
-- Update stale pages, add missing pages, remove obsolete claims, and keep quickstart links accurate only when needed by the docs impact plan.
-- Promote a backlog entry when recent changes touch that area or the update has spare documentation budget, then document the area and remove the entry from the backlog.
-- Do not let the backlog grow silently: every identified area must remain either documented or represented by a concise backlog entry with a source anchor and reason.
-- Updates may be a no-op. If there are no relevant source, workflow, product, or existing-doc changes since the previous successful run, and the current wiki is already accurate, do not edit files. Say that the wiki is already current.
-- **[adapted]** Record successful run metadata in openwiki/.last-update.json yourself, only if content changed, per Step 5.
-
-## Step 4 — Validate diagrams, then synchronize directory indexes (after the work; ported from upstream `src/mermaid/wiki.ts` + `src/okf/index-sync.ts` + `src/okf/index-labels.ts`)
-
-Upstream runs two deterministic after-run passes on every init/update run, not chat (`okf-middleware.ts`: `validateWikiMermaid`, then `synchronizeWikiIndexes`). Here, do both yourself after the documentation work, before Step 5, so their writes land in the Step 5 content hash. Skip them only when Step 1 already exited at the early no-op (upstream never reaches the passes on that path).
+Upstream runs three deterministic after-run passes on every init/update run, not chat (`okf-middleware.ts`: `validateWikiMermaid`, then `synchronizeWikiIndexes`, then `validateWikiInternalLinks` — the third since 0.3.0, #371). Here, do all three yourself in that order after the documentation work, before Step 5, so their writes land in the Step 5 content hash. Skip them only when Step 1 already exited at the early no-op (upstream never reaches the passes on that path).
 
 First: delete `openwiki/_plan.md` if it still exists (upstream `removeTemporaryPlanFile` runs on every non-chat run — since 0.2.5 the prompt no longer tells the agent to delete the plan, so this pass is the removal, not a backstop), and if any concept page still lacks a usable `type`, repair it per Step 2's normalization rule — upstream re-normalizes every concept file while collecting index entries, so index generation never fails on a non-compliant page.
 
@@ -445,6 +206,17 @@ okf_version: "0.1"
 
 3. Compare with the existing `index.md` and write only when the content differs — byte-identical output is skipped, so no-op runs stay no-ops.
 
+**Then validate internal links** (ported from upstream `validateWikiInternalLinks` in `src/agent/wiki-link-validator.ts`, since 0.3.0 — runs after index sync; it stamps broken links in place and never fails the run). For every `.md` file under `openwiki/` except `index.md`, `log.md`, `_plan.md`, `INSTRUCTIONS.md`, and dot-files/dot-directories:
+
+1. Strip any previously inserted stamp lines — full-line HTML comments matching `<!-- openwiki: broken internal link ... -->` — so revalidation starts clean and a fixed link leaves no residual comment.
+2. Collect every inline Markdown link `[text](dest)` with its line number, skipping image links (`![...]`). Ignore external destinations (any URI scheme, or protocol-relative `//…`) and empty ones. Drop a trailing Markdown link title (`path "Title"`), then split an optional `#anchor` off the path (URL-decode the anchor before comparing).
+3. Validate each remaining link:
+   - Anchor-only (`#foo`) → the source file's own headings must expose the anchor. Anchors are GitHub-style slugs of ATX heading titles: trim, lowercase, strip everything except Unicode letters/numbers/spaces/`_`/`-`, spaces → hyphens; duplicate slugs get `-1`, `-2`, … suffixes. Missing → message `heading anchor "<anchor>" does not exist in <source path>`.
+   - Path → resolve relative to the source file's directory (or the wiki root when it starts with `/`), normalized; a path escaping the wiki root is broken (`link "<path>" is outside the wiki root`). A trailing `/` makes it a directory link — the directory must exist (`directory "<path>" does not exist`); otherwise the target file must exist (`file "<path>" does not exist`).
+   - Path + anchor (non-directory) → the target file's headings must also expose the anchor (same slug rules) → else `heading anchor "<anchor>" does not exist in "<path>"`.
+4. Insert one stamp line directly above each broken link's line (insert bottom-up so line numbers stay valid; multiple broken links on one line get one stamp each), in upstream's exact format: `<!-- openwiki: broken internal link [<href>] <message>. Fix the href or restore the target, then delete this comment. -->`
+5. Write a file back only when its content changed. A later update run repairs stamped links per the prompt's "Link integrity" section.
+
 ## Step 5 — Persist metadata (after the work; ported from upstream `persistRunMetadataIfChanged`)
 
 Recompute the Step 2 hash with the same command.
@@ -466,36 +238,6 @@ Recompute the Step 2 hash with the same command.
 Run the `date` and `git` commands — never guess the timestamp or the head.
 
 Run this step even when the run fails after generating content (upstream invokes `persistRunMetadataIfChanged` on the error path too): if the hash changed, write the metadata before reporting the failure — with `status: "interrupted"` instead of `"complete"`, so the already-generated content stays diffable and the next update knows the wiki may be partial and does not skip (#365).
-
-## The user prompt to act on
-
-**init:**
-
-> Initialize OpenWiki documentation for this repository.
->
-> Inspect the relevant evidence thoroughly, identify the major technical, business, or knowledge domains, and write the initial documentation under openwiki/.
->
-> Start with openwiki/quickstart.md as the entrypoint. Then create section directories and pages that explain the subject in a way that is useful to both humans and future agents.
->
-> Wiki brief: *(contents of openwiki/INSTRUCTIONS.md, or "(not provided)")*
->
-> Git context: *(the Step 1 output)*
-
-**update:**
-
-> Update the existing OpenWiki documentation for this repository.
->
-> Inspect openwiki/, identify recent source changes or newly ingested connector evidence, and refresh only the documentation pages directly affected by those changes. Use the git evidence below when available. Keep edits surgical: do not rewrite accurate sections, do not update source maps or git evidence just to refresh them, and do not make formatting-only changes. If the wiki is already current, do not edit files. **[adapted]** Update openwiki/.last-update.json yourself only when OpenWiki content changes (per Step 5).
->
-> Last update metadata: *(contents of openwiki/.last-update.json, or "No previous OpenWiki update metadata was found.")*
->
-> Wiki brief: *(contents of openwiki/INSTRUCTIONS.md, or "(not provided)")*
->
-> Git change summary: *(the Step 1 output)*
-
-If the user gave an additional instruction, append:
-
-> Additional user instruction: *(that text)*
 
 ## Final response
 
