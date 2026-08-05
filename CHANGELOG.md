@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The two `references/index-labels.md` copies stay deliberately per-skill (skills install and load per-directory, so a shared sibling file would break standalone installs); UPSTREAM.md's sync procedure gains a drift guard — after any `index-labels.ts` sync, the two copies must diff empty.
+
 - Progressive-disclosure pass over the wiki skills' SKILL.md files: the 38-row localized index-label table (upstream `index-labels.ts`) moves out of both wiki skills' Step 4 into per-skill `references/index-labels.md`, read only when the wiki's effective language is not English — the `en` default keeps its labels inline (`openwiki` 252→211 lines, `openwiki-personal` 466→425). Reviewed and deliberately kept inline: the personal skill's Step 3 prompt (every run executes it in full), `prompt-init.md`'s subagent prompts (the init run invokes them in the same run), the Step 2 translation rules and `.openwikiignore` semantics (small, skip-decision-bearing, and security-relevant) — splitting content a run reads anyway saves nothing.
 
 ## 0.3.1 (2026-08-05)
