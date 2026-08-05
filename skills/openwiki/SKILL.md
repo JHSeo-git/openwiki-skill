@@ -112,7 +112,7 @@ openwiki_generated: true
 ```
 
 - Values are JSON-double-quoted. `openwiki_generated: true` flags code-derived metadata; the documentation run should replace it with accurate metadata per "Front matter requirements (OKF)" when it touches the page.
-- Non-English wiki language → the derived `type` is that language's localized label from Step 4's table instead of `"Reference"` (upstream `resolveConceptTypeLabel`: full tag → primary subtag → English fallback).
+- Non-English wiki language → the derived `type` is that language's localized label from `references/index-labels.md` instead of `"Reference"` (upstream `resolveConceptTypeLabel`: full tag → primary subtag → English fallback).
 - The rebuild would drop the page's extension fields, so carry an existing `openwiki_translation_pending` field over into the replacement block (upstream `PRESERVED_EXTENSION_FIELDS`) — a page that is both non-conformant and pending translation must not lose its control marker.
 
 ## Step 3 — System prompt (act as this agent)
@@ -161,48 +161,7 @@ okf_version: "0.1"
 
    - Non-root directories: the same content without the `okf_version` block.
    - Sort each list alphabetically by link target (upstream: `localeCompare`). Escape `\`, `[`, and `]` in labels.
-   - The `Files` / `Directories` headings (including the empty-directory `# Files`) are the wiki language's labels from the table below (upstream `resolveIndexLabels`: full tag → primary subtag → English fallback, so `pt-BR` uses the `pt` row while `pt-PT` has its own row; an unlisted language keeps English). These two words are curated structural chrome, not translated prose — use the table verbatim, never your own translation. The Derived type column is the localized `type` that Step 2's normalization (re-applied here) stamps on repaired pages (upstream `resolveConceptTypeLabel`, same resolution; a language upstream leaves out of that map falls back to English `Reference`).
-
-| Language | Files | Directories | Derived type |
-|---|---|---|---|
-| en | Files | Directories | Reference |
-| ar | ملفات | مجلدات | مرجع |
-| bg | Файлове | Директории | Reference |
-| ca | Fitxers | Directoris | Referència |
-| cs | Soubory | Adresáře | Reference |
-| da | Filer | Mapper | Reference |
-| de | Dateien | Verzeichnisse | Referenz |
-| el | Αρχεία | Κατάλογοι | Αναφορά |
-| es | Archivos | Directorios | Referencia |
-| fi | Tiedostot | Hakemistot | Reference |
-| fr | Fichiers | Répertoires | Référence |
-| he | קבצים | תיקיות | Reference |
-| hi | फ़ाइलें | निर्देशिकाएँ | संदर्भ |
-| hr | Datoteke | Direktoriji | Referenca |
-| hu | Fájlok | Könyvtárak | Reference |
-| id | Berkas | Direktori | Referensi |
-| it | File | Cartelle | Riferimento |
-| ja | ファイル | ディレクトリ | リファレンス |
-| ko | 파일 | 디렉터리 | 참조 |
-| ms | Fail | Direktori | Rujukan |
-| nb | Filer | Mapper | Referanse |
-| nl | Bestanden | Mappen | Referentie |
-| no | Filer | Mapper | Referanse |
-| pl | Pliki | Katalogi | Reference |
-| pt | Arquivos | Diretórios | Referência |
-| pt-PT | Ficheiros | Diretórios | Referência |
-| ro | Fișiere | Directoare | Referință |
-| ru | Файлы | Каталоги | Справочник |
-| sk | Súbory | Adresáre | Referencia |
-| sl | Datoteke | Mape | Reference |
-| sr | Датотеке | Директоријуми | Референца |
-| sv | Filer | Kataloger | Referens |
-| th | ไฟล์ | ไดเรกทอรี | อ้างอิง |
-| tr | Dosyalar | Dizinler | Referans |
-| uk | Файли | Каталоги | Довідник |
-| vi | Tập tin | Thư mục | Tham khảo |
-| zh | 文件 | 目录 | 参考 |
-| zh-TW | 檔案 | 目錄 | 參考 |
+   - The `Files` / `Directories` headings (including the empty-directory `# Files`) and the Derived type that Step 2's normalization (re-applied here) stamps on repaired pages are the wiki language's labels from upstream's curated table (`resolveIndexLabels` / `resolveConceptTypeLabel`: full tag → primary subtag → English fallback). English (`en`, the default) uses `Files` / `Directories` / `Reference` — any other effective language → read `references/index-labels.md` in this skill's directory and use its row verbatim (curated structural chrome, never your own translation).
 
 3. Compare with the existing `index.md` and write only when the content differs — byte-identical output is skipped, so no-op runs stay no-ops.
 

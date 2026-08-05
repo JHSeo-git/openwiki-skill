@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Progressive-disclosure pass over the wiki skills' SKILL.md files: the 38-row localized index-label table (upstream `index-labels.ts`) moves out of both wiki skills' Step 4 into per-skill `references/index-labels.md`, read only when the wiki's effective language is not English — the `en` default keeps its labels inline (`openwiki` 252→211 lines, `openwiki-personal` 466→425). Reviewed and deliberately kept inline: the personal skill's Step 3 prompt (every run executes it in full), `prompt-init.md`'s subagent prompts (the init run invokes them in the same run), the Step 2 translation rules and `.openwikiignore` semantics (small, skip-decision-bearing, and security-relevant) — splitting content a run reads anyway saves nothing.
+
 ## 0.3.1 (2026-08-05)
 
 - Upstream sync: bump pin `9a02b35` → `630eb9e` (upstream v0.3.1). Link-validator false-positive fix (#585) ported into both wiki skills' Step 4 link pass: targets now resolve repo-wide instead of being confined to the wiki subtree (a wiki page may legitimately link out to any repository file; the `is outside the wiki root` verdict is gone — a link is broken only when its target genuinely does not exist, with `cannot be resolved` reserved for unresolvable paths), heading anchors are validated only on `.md` targets (directory anchors and GitHub `#L10` line anchors on source files are never flagged), and anchor slugs now match `github-slugger` exactly (Unicode combining marks kept; each whitespace character becomes its own hyphen instead of collapsing, so "A & B" slugs to `a--b`). Out of scope: telemetry fingerprinting (#589) and upstream's own wiki update (#583). Version stamps across skill intros, prompt references, and README now say v0.3.1.
