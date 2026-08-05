@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Upstream sync: bump pin `9a02b35` → `630eb9e` (upstream v0.3.1). Link-validator false-positive fix (#585) ported into both wiki skills' Step 4 link pass: targets now resolve repo-wide instead of being confined to the wiki subtree (a wiki page may legitimately link out to any repository file; the `is outside the wiki root` verdict is gone — a link is broken only when its target genuinely does not exist, with `cannot be resolved` reserved for unresolvable paths), heading anchors are validated only on `.md` targets (directory anchors and GitHub `#L10` line anchors on source files are never flagged), and anchor slugs now match `github-slugger` exactly (Unicode combining marks kept; each whitespace character becomes its own hyphen instead of collapsing, so "A & B" slugs to `a--b`). Out of scope: telemetry fingerprinting (#589) and upstream's own wiki update (#583). Version stamps across skill intros, prompt references, and README now say v0.3.1.
+
 - README restructured along upstream's layout (content unchanged, redistributed): a centered lockup header (`static/openwiki-skill-lockup.png` + tagline + badge, mirroring upstream's `static/openwiki-lockup.png` header), the feature-blob intro paragraph becomes a "gives you" highlight list, plus "What's new (v0.3.0)", "Quick start" (install → first prompt → keep current), and dedicated "Ignoring paths" sections; Install/Use fold into Quick start/Use.
 
 ## 0.3.0 (2026-08-04)
