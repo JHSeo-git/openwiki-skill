@@ -1,4 +1,4 @@
-# Runtime evidence runs (LangSmith) — ported from upstream `src/code-mode.ts` + `src/ingestion.ts`
+# Runtime evidence runs (LangSmith) — ported from upstream `src/ingestion/code-mode.ts` + `src/ingestion/ingestion.ts`
 
 Upstream 0.2.4 (#436) adds code-mode connectors: on every `openwiki code --update`, `runCodeModeConnectors` lets each configured code connector deterministically pull raw evidence — LangSmith pulls an anomaly-weighted sample of the repository's recent production traces — and appends that connector's synthesis-guidance block to the update prompt, so the same documentation run folds runtime findings into the repository wiki. **[adapted]** This port has no connector runtime: run this as a normal `openwiki` update (Steps 0, 1, 2, 4, 5 apply as usual) with the guidance block below appended to the user prompt, and gather the trace evidence yourself with the host's tools — a LangSmith MCP server the user has connected, or the LangSmith API via an authenticated CLI/`curl` the user provides. Never ask to see or print API keys; refer to credentials by env var name only (upstream: `OPENWIKI_LANGSMITH_API_KEY`, plus `_2`, `_3`, … for extra workspaces).
 

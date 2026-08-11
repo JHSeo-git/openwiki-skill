@@ -27,7 +27,7 @@ Slack note:
 
 ## Credentials — `~/.openwiki/.env`
 
-Connector credentials (a Slack user token, future connector keys) live in `~/.openwiki/.env` — the same file the upstream CLI treats as its credential source of truth (`src/env.ts`, `openWikiEnvPath`), so this port and upstream share one place. Rules:
+Connector credentials (a Slack user token, future connector keys) live in `~/.openwiki/.env` — the same file the upstream CLI treats as its credential source of truth (`src/config/env.ts`, `openWikiEnvPath`), so this port and upstream share one place. Rules:
 
 - Name variables in upstream's style (e.g. `OPENWIKI_SLACK_USER_TOKEN=...`, matching `OPENWIKI_TAVILY_API_KEY`/`OPENWIKI_NOTION_MCP_ACCESS_TOKEN`), one `KEY=value` per line. `chmod 600 ~/.openwiki/.env`.
 - The agent never reads this file — the ported prompt's security rules forbid reading `.env` files. Load it only inside the command invocation, in one shell call, so values never appear in output or the transcript: `set -a; . ~/.openwiki/.env; set +a; <connector command>`.
