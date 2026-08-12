@@ -19,20 +19,11 @@ The upstream CLI drives an LLM through provider APIs. This port drops that plumb
 - **Agent-written repo docs that stay accurate** — init builds a complete, QA-verified wiki; update makes surgical, impact-plan-driven edits and no-ops cleanly when nothing relevant changed.
 - **A personal knowledge wiki** fed by your own sources — MCP servers, web search, local repos — instead of upstream's OAuth connectors.
 - **Wiki-first Q&A** that answers from either wiki, citing pages and their inline source references.
-- **Open Knowledge Format** ([OKF v0.1](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)) output: YAML front matter on every concept page (only `type` required; producer extensions preserved), an evidence-backed concept graph, deterministically generated `index.md` per directory, and automatic normalization of non-compliant pages at the start of every run.
-- **Validated Mermaid diagrams** on pages documenting runtime flows, lifecycles, or data models — broken fences degrade to text fences instead of breaking rendering.
-- **Validated internal links** — after every run, broken links and heading anchors are stamped in place for the next update to repair.
+- **Open Knowledge Format** ([OKF v0.1](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)) output: YAML front matter on every concept page (only `type` required; producer extensions preserved), an evidence-backed concept graph, deterministically generated `index.md` per directory, and automatic normalization of non-compliant pages — wikis stay interoperable with the upstream CLI, so either tool can continue a wiki the other started.
+- **Validated rendering after every run** — broken Mermaid fences degrade to text fences instead of breaking the page, and broken internal links or heading anchors are stamped in place for the next update to repair.
 - **Multilingual wikis** (BCP-47): the output language persists in run metadata, index headings localize, and switching it retranslates the whole wiki.
 - **`.openwikiignore`** — a gitignore-style read boundary for repository runs: matching paths are never read, scanned, or documented.
 - **Keyless scheduled updates** via local cron or a cloud routine under your subscription, plus CI templates for the API-key route.
-- **Upstream-interoperable wikis** — either tool can continue a wiki the other started.
-
-## What's new (v0.3.0)
-
-- **Init, rebuilt:** skeleton-first repository mapping, an independent critic subagent, evidence gates before any prose, and a question-finder/answer-verifier QA loop — with no page budget.
-- **Update, unbudgeted:** no preset page limit; the agent inspects the git range since the last documented commit itself and routes changes through a docs impact plan.
-- **Internal-link validation** after every run, with in-place `openwiki: broken internal link` stamps.
-- **Strict managed markers:** malformed or duplicated `OPENWIKI:START/END` blocks fail setup instead of corrupting agent instruction files.
 
 ## Quick start
 
@@ -59,7 +50,6 @@ The first run initializes `openwiki/`: a `quickstart.md` entrypoint with a task-
 
 ## Use
 
-- "Generate documentation for this repository" → init, as in Quick start above.
 - "Update the wiki" → surgical update driven by a docs impact plan over the git range since the last documented commit; no-ops cleanly (early git check + content-hash check) when nothing relevant changed.
 - "Migrate the wiki to OKF" → just run an update: every run starts by normalizing non-compliant pages (minimal `type`/`title` front matter flagged `openwiki_generated: true`, bodies untouched), then enriches the flagged pages it works on.
 - "Switch the wiki to Korean" → an update that retranslates every page (front matter titles/descriptions included, code identifiers untouched), localizes index headings, and persists the language so later runs keep writing in it.
@@ -86,7 +76,7 @@ This is a read boundary: ignored paths are never read, scanned, or reproduced in
 
 ## Upstream
 
-System prompt, workflow, and metadata semantics derive from [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) (MIT). Pinned commit and sync procedure: [UPSTREAM.md](UPSTREAM.md). The `openwiki-ask` skill and the keyless automation angle were inspired by [jatinmayekar/openwiki-for-claude-code](https://github.com/jatinmayekar/openwiki-for-claude-code) (MIT).
+System prompt, workflow, and metadata semantics derive from [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) (MIT). Pinned commit and sync procedure: [UPSTREAM.md](UPSTREAM.md). Releases track upstream versions in lockstep — what each sync ported is in [CHANGELOG.md](CHANGELOG.md) and the [GitHub Releases](https://github.com/JHSeo-git/openwiki-skill/releases). The `openwiki-ask` skill and the keyless automation angle were inspired by [jatinmayekar/openwiki-for-claude-code](https://github.com/jatinmayekar/openwiki-for-claude-code) (MIT).
 
 ## License
 

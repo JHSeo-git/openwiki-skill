@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- README tidy-up: the version-pinned "What's new" section is gone (it staled every release; release news lives in CHANGELOG/GitHub Releases, now linked from the Upstream section), the "gives you" list dedupes to eight bullets (Mermaid + link validation merge into one validated-rendering bullet; upstream interoperability folds into the OKF bullet), and the redundant first "Use" bullet (repeating Quick start) is dropped.
+
 ## 0.3.2 (2026-08-11)
 
 - Upstream sync: bump pin `630eb9e` → `50e897d` (upstream v0.3.2). Nothing to port — the only mapped-path commit is the domain-directory reorganization (#513), which moved four mapped files with import-only diffs (`src/code-mode.ts` → `src/ingestion/code-mode.ts`, `src/ingestion.ts` → `src/ingestion/ingestion.ts`, `src/language.ts` → `src/platform/language.ts`, `src/constants.ts` → `src/config/constants.ts`; `src/agent/`, `src/okf/`, `src/mermaid/` stayed put). UPSTREAM.md's mapping table, out-of-scope list, and sync-procedure path list now use the new layout so future syncs don't miss moved files; provenance pointers across the skills and version stamps say v0.3.2. Out of scope: dependency pins (#616/#605), exec-bit build fix (#610), Windows MCP child env (#599), credentials/CLI module splits (#612/#611), error-classification hardening (#604), and upstream's own wiki updates.
