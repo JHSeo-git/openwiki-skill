@@ -1,5 +1,7 @@
 # Connectors — wiring sources with host tools
 
+> Upstream 0.3.3 adds a built-in `custom-mcp` connector for arbitrary MCP servers. In this port that role needs no wiring: any MCP server the user has connected is already a source — synthesis rules for it live in `sources.md` (`### custom-mcp`).
+
 Upstream OpenWiki feeds the personal wiki through built-in connectors (`src/connectors/sources/*`) that dump raw data under `~/.openwiki/connectors/`. This port has no connector runtime: **the host agent's own tools are the connectors.** This page is guidance only — it is not part of the ported prompt and nothing here is required. Pick the tool you already have, name the source in `~/.openwiki/INSTRUCTIONS.md` (the wiki brief), and the per-source synthesis rules in [`sources.md`](sources.md) take over.
 
 | Connector | Upstream implementation | Host-tool equivalent |

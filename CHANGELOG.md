@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Upstream sync: bump pin `50e897d` → `355f4f6` (upstream v0.3.3). Three ports: `openwiki` Step 0 now writes per-file snippets (#640 — AGENTS.md keeps the full block, CLAUDE.md's managed block becomes a one-line pointer to AGENTS.md, byte-identical to `createCodeModeClaudeSnippet()`; replacing an older full block in CLAUDE.md is a real expected write, and the port's `@AGENTS.md`-import exception stays — an import already does the pointer's job); the backend glob guards (#622) join the Step 3 conventions note as prompt discipline (no unbounded root globs, no globbing `.git` metadata — `git rev-parse HEAD` for the current commit); and `sources.md` gains upstream's verbatim `custom-mcp` synthesis arm (#619, `[adapted]` evidence line: any user-connected MCP server), with a pointer note in `connectors.md`. Out of scope: connector-tool gating to local-wiki runs (#603, tool-mounting wiring), provider plumbing (#266/#590/#491), the CLI-generated workflow env block (#621), LangSmith APAC region (#639), MCP tools/list pagination (#566), terminal-stream sanitization (#550), read-only-install skill sync (#635), the LEDGER benchmark harness (#622), and upstream's own wiki updates. Version stamps say v0.3.3.
+
 - README tidy-up: the version-pinned "What's new" section is gone (it staled every release; release news lives in CHANGELOG/GitHub Releases, now linked from the Upstream section), the "gives you" list dedupes to eight bullets (Mermaid + link validation merge into one validated-rendering bullet; upstream interoperability folds into the OKF bullet), and the redundant first "Use" bullet (repeating Quick start) is dropped.
 
 ## 0.3.2 (2026-08-11)
