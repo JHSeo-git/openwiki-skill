@@ -41,7 +41,9 @@ Safer than `--dangerously-skip-permissions` on your own machine. Add to the **ta
       "Bash(shasum:*)",
       "Bash(sha256sum:*)",
       "Bash(date:*)",
-      "Bash(rm -f openwiki/_plan.md)",
+      "Bash(head:*)",
+      "Bash(sed:*)",
+      "Bash(cut:*)",
       "Write(openwiki/**)",
       "Edit(openwiki/**)",
       "Write(AGENTS.md)",
@@ -53,7 +55,7 @@ Safer than `--dangerously-skip-permissions` on your own machine. Add to the **ta
 }
 ```
 
-Read/Glob/Grep are already read-only, the git commands above are read-only, and the skill itself forbids reading `.env`/secrets. Writes stay scoped to `openwiki/**` plus the two root instruction files.
+Read/Glob/Grep are already read-only, the git commands above are read-only, and the skill itself forbids reading `.env`/secrets. Writes stay scoped to `openwiki/**` plus the two root instruction files. `head`/`sed`/`cut` cover Step 2's body-hash helper and Step 5's `sources` id derivation. This allowlist is for scheduled **update** runs only: since upstream 0.4.0 an init replaces the wiki, which needs `mktemp`/`cp`/`rm -rf`/`mkdir` for the backup-and-wipe transaction — do not grant those unattended.
 
 ## 3. CI with an API credential
 
