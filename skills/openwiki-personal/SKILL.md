@@ -77,8 +77,12 @@ openwiki_generated: true
 1. the SHA-256 of its **body**, i.e. the content after the leading front-matter block, whitespace included:
 
 ```bash
-body() { if [ "$(head -n1 "$1")" = "---" ]; then sed '1,/^---$/d' "$1"; else cat "$1"; fi; }
-body ~/.openwiki/wiki/quickstart.md | shasum -a 256
+# Set `page` per file and re-run. Deliberately a variable, not a shell
+# function taking a positional parameter: a dollar sign followed by a digit
+# is substituted with this skill's invocation arguments before the agent
+# ever reads the file, which would silently corrupt the command.
+page=~/.openwiki/wiki/quickstart.md
+if [ "$(head -n1 "$page")" = "---" ]; then sed '1,/^---$/d' "$page"; else cat "$page"; fi | shasum -a 256
 ```
 
 2. its existing `generated` event, when it has a valid one (a mapping with a non-empty string `by`, and an `at` that is a non-empty string when present).
@@ -384,7 +388,7 @@ okf_version: "0.2"
 date -u +%Y-%m-%dT%H:%M:%S.000Z
 ```
 
-For every concept page (same exclusions), recompute the body hash with Step 2's `body` helper and compare it to the Step 2 baseline:
+For every concept page (same exclusions), recompute the body hash with Step 2's body-extraction command and compare it to the Step 2 baseline:
 
 - **New page, or body hash changed** → set `generated: {by: "<actor>", at: "<run timestamp>"}` and remove any `timestamp` field, which OKF v0.2 supersedes. Whitespace counts: any body change advances the stamp.
 - **Body unchanged** → restore the baseline exactly: re-set the `generated` event the page had before the run (the documentation work may have dropped or altered it), or remove `generated` entirely if it had none. A front-matter-only change never advances the stamp.
