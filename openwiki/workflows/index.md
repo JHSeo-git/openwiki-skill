@@ -1,0 +1,5 @@
+# Files
+
+- [Personal wiki run](personal-wiki-run.md) - The five-step local-wiki lifecycle the openwiki-personal skill executes — context, snapshot plus translation plus normalization plus provenance baseline, the single monolithic authoring prompt, four finalize passes, and metadata — plus how a source-ingestion run differs and why this mode still uses upstream's shared agent.
+- [Repository wiki run](repository-wiki-run.md) - The seven-step repository lifecycle the openwiki skill executes — marker setup, context with evidence preflight and no-op check, prepare, plan, the per-page queue, finalize, metadata — including why init is destructive, why the preflight precedes the no-op check, and the gates a page must pass.
+- [Upstream sync](upstream-sync.md) - How a new upstream release is ported — the pinned commit, the path mapping that decides what is in scope, the six-step procedure, the drift guards, and the failure modes this repository has actually hit and now defends against.

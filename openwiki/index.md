@@ -1,7 +1,14 @@
 ---
-okf_version: "0.1"
+okf_version: "0.2"
 ---
 
 # Files
 
-- [openwiki-skill quickstart](quickstart.md) - Entry point for the openwiki-skill repository wiki — what this port of langchain-ai/openwiki is, the layout of the four skills and their reference files, the step-by-step runtime of the code and personal wiki modes, and the fidelity rules for changing or syncing the port.
+- [openwiki-skill quickstart](quickstart.md) - Entry point for the openwiki-skill repository wiki — what this prompt-only port of langchain-ai/openwiki is, a task-routing map from intent to the page and files that own it, and the invariants any change must preserve.
+
+# Directories
+
+- [architecture](architecture/)
+- [concepts](concepts/)
+- [operations](operations/)
+- [workflows](workflows/)
