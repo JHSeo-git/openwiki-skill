@@ -1,5 +1,7 @@
 # Changelog
 
+## Unreleased
+
 ## 0.4.0 (2026-08-26)
 
 - Upstream sync: bump pin `355f4f6` → `27d835c` (upstream v0.4.0). The largest sync so far: upstream replaced repository generation with a resumable page-job lifecycle (#713), added grounded Claims (#638, #692, #715), adopted OKF v0.2 with code-owned provenance (#581, #684), and made init regenerate from scratch (#699). The `openwiki` skill is restructured into seven steps (0 setup, 1 context + evidence preflight + no-op, 2 prepare, 3 plan, 4 page queue, 5 finalize, 6 metadata); `references/prompt-init.md` and `prompt-update.md` are replaced by `references/prompt-planner.md` and `references/prompt-page.md`.
