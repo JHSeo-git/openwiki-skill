@@ -5,7 +5,7 @@ description: "Generate or maintain repository wiki documentation in openwiki/. A
 
 # OpenWiki — repository wiki agent (code mode)
 
-Port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.4.0, repository ("code") mode. Since upstream 0.4.0 (#713) repository generation is a **resumable page-job lifecycle** rather than one long agent turn: a bounded planner fixes the complete page set, then one fresh worker writes each page and submits its material **Claims**, and deterministic code finalizes the wiki. This skill reproduces that lifecycle — Step 3 routes to `references/prompt-planner.md` (upstream `src/agent/repository-prompts.ts` `createRepositoryPlannerPrompt` + `src/generation/page-jobs.ts`), Step 4 to `references/prompt-page.md` (`createRepositoryPagePrompt` + `src/claims/guidance.ts` + `src/generation/repository-run.ts`'s submission gates) — wrapped in the runtime steps the upstream CLI performs around them (Step 0 from `src/ingestion/code-mode.ts`; Steps 1, 2, 6 from `src/agent/utils.ts` + `src/platform/language.ts` + `src/agent/openwiki-ignore.ts` + `src/agent/wiki-replacement.ts`; Steps 2 and 5 from `src/agent/wiki-finalizer.ts` and what it orchestrates — `src/okf/index-sync.ts`, `src/okf/index-labels.ts`, `src/mermaid/wiki.ts`, `src/agent/wiki-link-validator.ts`, `src/okf/claim-sources.ts`, `src/okf/generated-provenance.ts`). You are the agent; the current repository is the target. No CLI, no API key — you do the work with your own tools.
+Port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.4.1, repository ("code") mode. Since upstream 0.4.0 (#713) repository generation is a **resumable page-job lifecycle** rather than one long agent turn: a bounded planner fixes the complete page set, then one fresh worker writes each page and submits its material **Claims**, and deterministic code finalizes the wiki. This skill reproduces that lifecycle — Step 3 routes to `references/prompt-planner.md` (upstream `src/agent/repository-prompts.ts` `createRepositoryPlannerPrompt` + `src/generation/page-jobs.ts`), Step 4 to `references/prompt-page.md` (`createRepositoryPagePrompt` + `src/claims/guidance.ts` + `src/generation/repository-run.ts`'s submission gates) — wrapped in the runtime steps the upstream CLI performs around them (Step 0 from `src/ingestion/code-mode.ts`; Steps 1, 2, 6 from `src/agent/utils.ts` + `src/platform/language.ts` + `src/agent/openwiki-ignore.ts` + `src/agent/wiki-replacement.ts`; Steps 2 and 5 from `src/agent/wiki-finalizer.ts` and what it orchestrates — `src/okf/index-sync.ts`, `src/okf/index-labels.ts`, `src/mermaid/wiki.ts`, `src/agent/wiki-link-validator.ts`, `src/okf/claim-sources.ts`, `src/okf/generated-provenance.ts`). You are the agent; the current repository is the target. No CLI, no API key — you do the work with your own tools.
 
 Harness adaptations are marked **[adapted]**; upstream content with no equivalent here is marked **[omitted]**. Everything else is upstream text — keep it that way so upstream syncs stay line-mappable (see `UPSTREAM.md` in this skill's source repo). Upstream's personal knowledge wiki ("local-wiki" mode at `~/.openwiki/wiki`) is ported as the separate `openwiki-personal` skill; wiki Q&A as `openwiki-ask`.
 
@@ -126,10 +126,19 @@ Record the hash. (`shasum -a 256` covers macOS and most Linux; on minimal Linux 
 
 **[omitted]** Upstream also fingerprints every model-visible repository source file here (`createRepositorySourceFingerprint`) and re-checks it at finalization, invalidating the plan if the repository drifted mid-run — a correctness gate for a lifecycle that can span processes. This port runs in one foreground session, so instead do the cheap version: note the current `git rev-parse HEAD` and worktree state now, and if either moved by Step 6, say so in the final report and recommend a follow-up update run rather than silently shipping a plan built against older source.
 
-**Then normalize the wiki** (ported from upstream `migrateWikiToOkf`, run by `prepareWikiForAuthoring`, so the run operates over an already-conformant wiki). For every `.md` file under `openwiki/` except `index.md`, `log.md`, `INSTRUCTIONS.md`, and dot-files/dot-directories:
+**Then repair the wiki's front matter** (ported from upstream `repairOkfFrontmatter`, which `migrateWikiToOkf` delegates to, run by `prepareWikiForAuthoring` so the run operates over an already-conformant wiki). Since 0.4.1 (#728) this is a **field-by-field repair, not a rebuild**: invalid *optional* metadata used to abort a run, and now it is repaired or removed deterministically instead. Every path below ends in a page that passes OKF validation. For every `.md` file under `openwiki/` except `index.md`, `log.md`, `INSTRUCTIONS.md`, and dot-files/dot-directories:
 
-- Its front matter parses as YAML and `type` is a non-empty string → leave the file untouched, even when optional fields are junk. An author's `type` and custom fields are never overwritten.
-- Otherwise (no front matter, unparseable YAML, or missing/empty `type`) → replace the front matter (or add one) with exactly this minimal block — one blank line after the closing `---`, then the body with its leading whitespace trimmed:
+1. **The page already passes OKF validation → leave it byte-for-byte unchanged.** (This is a stronger test than 0.4.0's "parses and has a non-empty `type`": junk optional fields are no longer tolerated, they are repaired.)
+2. **Otherwise, if the YAML block still parses to a mapping → repair in place**, keeping every other line and every producer extension field as written:
+   - `type` missing or not a non-empty string → set the fallback `type` **and** set `openwiki_generated: true`.
+   - `title` → set the derived title when either the `type` was just derived and no `title` key is present, or a `title` key is present but is not a non-empty string. A valid page missing only `title` is left alone — `title` is optional.
+   - `description`, `resource`, `timestamp` present but not a non-empty string → **remove the field**.
+   - `tags` present → keep only the non-empty string entries; nothing left → remove the field.
+   - `generated` present but not a valid `{by, at?}` actor event → **remove it**. A trust assertion that cannot be proven conformant is removed rather than rewritten into a false one.
+   - `verified` present → keep only the conformant events (re-rendered as a list).
+   - `sources` present → keep only the entries with a non-empty string `resource`.
+   - `status` not one of `draft`/`stable`/`deprecated`, or `stale_after` not an ISO 8601 datetime with an explicit offset → remove the field.
+3. **If the YAML block cannot be parsed, or the repair still does not validate → replace the front matter with exactly this minimal derived block** (one blank line after the closing `---`, then the body **as-is** — since 0.4.1 its leading whitespace is no longer trimmed, so a page that had an unusable block may keep a blank line the old rule removed):
 
 ```markdown
 ---
@@ -141,7 +150,7 @@ openwiki_generated: true
 
 - Values are JSON-double-quoted. `openwiki_generated: true` flags code-derived metadata; the page's Step 4 worker should replace it with accurate metadata grounded in the page body and then remove the field.
 - Non-English wiki language → the derived `type` is that language's localized label from `references/index-labels.md` instead of `"Reference"` (upstream `resolveConceptTypeLabel`: full tag → primary subtag → English fallback).
-- The rebuild would drop the page's other fields, so carry these over into the replacement block verbatim when present: the scalar extension `openwiki_translation_pending` (upstream `PRESERVED_EXTENSION_FIELDS`), and — new in 0.4.0 — the structured OKF v0.2 families `generated`, `verified`, and `sources`, copied across as complete raw fields rather than re-rendered (upstream `PRESERVED_STRUCTURED_FIELDS`). All three are code-owned, so a page that is both non-conformant and stamped must not lose its provenance — and `openwiki_translation_pending` is a control marker a page that is both non-conformant and pending translation must not lose either.
+- Upstream's 0.4.0 carry-across lists (`PRESERVED_EXTENSION_FIELDS`, `PRESERVED_STRUCTURED_FIELDS`) are **gone in 0.4.1** and this port drops them too: path 2 preserves the original block outright, so nothing needs carrying. The consequence is worth knowing — on path 3, where the YAML is unusable, `openwiki_translation_pending` and the code-owned `generated` / `verified` / `sources` families are **lost**, because they cannot be read back from a block that does not parse.
 
 **Then capture the generated-provenance baseline** (ported from upstream `snapshotGeneratedProvenance`, new in 0.4.0 / #581, #684). For every concept page (same exclusions), record two things — Step 5 needs both:
 
@@ -175,11 +184,24 @@ Two boundaries deserve repeating here because they replace behavior earlier vers
 - **No subagents.** Upstream 0.4.0 deleted `skeleton_critic`, `wiki_question_finder`, and `wiki_answer_verifier`, strips the delegation tool from every worker, and its bundled host skill says plainly not to spawn planning, page, reviewer, critic, or QA subagents. Work the queue yourself, sequentially.
 - **No working files.** `openwiki/_plan.md` and `openwiki/_skeleton.md` no longer exist; any `_`-prefixed page path is rejected. The plan lives in your working notes, not in the wiki.
 
+### A page you cannot finish is skipped, not fatal (since 0.4.1, #732)
+
+Before 0.4.1 a page worker that could not complete aborted the whole update, throwing away every page already written. Now the failure is contained to its own page. Follow the same protocol:
+
+1. **Snapshot the page before you touch it** (upstream `captureRepositoryPageSnapshot`): record its exact current Markdown, or that it does not exist yet. **[adapted]** Upstream also snapshots the page's `.claims` sidecar; this port has none (Step 5), so the Markdown is the whole snapshot.
+2. **If you cannot complete the page** — you cannot ground it, its gates keep failing, or the work is not converging — **restore the snapshot exactly**: write the recorded Markdown back, or delete the page if it did not exist before. Then mark the job **skipped**, tell the user which page and why, and move to the next job. Do not leave a half-written page behind.
+3. **Keep going.** Skipped jobs do not block the rest of the queue, and they do not block Step 5.
+4. **One exception stays fatal**: a submission failure that is *not* a correctable input problem — a page you cannot persist at all — aborts the run. A page that merely fails validation is correctable, so fix it and re-check; a wiki you cannot write to is not.
+
+Carry the list of skipped pages and their snapshots into Steps 5 and 6; both need it. **[adapted]** Upstream also resets a skipped job to pending in its durable checkpoint so the next run retries it. This port re-plans from scratch every run, so the retry is automatic — but Step 6's metadata is what makes the next run *look*, so do not skip it.
+
 ## Step 5 — Finalize (after the work; ported from upstream `finishRepositoryRun` + `src/agent/wiki-finalizer.ts`)
 
 Upstream runs these deterministic passes in exactly this order on every init/update run. Do the same, after the page work and before Step 6, so their writes land in the Step 6 content hash. Skip the whole step only when Step 1 exited at the early no-op.
 
-**First, apply deletions.** If a mid-run replan abandoned pages this run created that are in neither the final plan nor the pre-run page inventory, delete those (upstream `applyAbandonedGeneratedPageDeletions` — it never touches a page that existed before the run). Then delete each page in the plan's `deletePages`; a page that is already gone is not an error. Also repair any concept page that still lacks a usable `type` per Step 2's normalization rule, so index generation never fails on a non-compliant page.
+**First, restore every skipped page.** For each page Step 4 skipped, write its snapshot back one more time before anything else runs (upstream `finishRepositoryRun` re-restores them at this point, because a later pass may have touched them). A skipped page must reach Step 6 byte-identical to how this run found it. Then treat those pages as **excluded** for the rest of this step: they take no `sources` projection and no Claims reconciliation, since this run produced no Claims for them and projecting an empty set would strip the grounding the previous run recorded.
+
+**Then apply deletions.** If a mid-run replan abandoned pages this run created that are in neither the final plan nor the pre-run page inventory, delete those (upstream `applyAbandonedGeneratedPageDeletions` — it never touches a page that existed before the run). Then delete each page in the plan's `deletePages`; a page that is already gone is not an error. Also re-run Step 2's front-matter repair over every concept page that no longer passes OKF validation, so index generation never fails on a non-compliant page.
 
 **Then validate Mermaid diagrams** (ported from `validateWikiMermaid`): for every `.md` file under `openwiki/` except `index.md`, `log.md`, `INSTRUCTIONS.md`, and dot-files/dot-directories (upstream `EXCLUDED_FILES`), check that every fenced ```mermaid block parses (a ```mermaid example nested inside a longer outer fence does not count):
 
@@ -224,7 +246,7 @@ okf_version: "0.2"
 4. Insert one stamp line directly above each broken link's line (insert bottom-up so line numbers stay valid; multiple broken links on one line get one stamp each), in upstream's exact format: `<!-- openwiki: broken internal link [<href>] <message>. Fix the href or restore the target, then delete this comment. -->`
 5. Write a file back only when its content changed. A later update run repairs stamped links.
 
-**Then project this run's Claims evidence into OKF `sources`** (ported from upstream `synchronizeClaimSources` in `src/okf/claim-sources.ts`, new in 0.4.0 / #692). Upstream re-projects every page its session holds Claim state for — which on an update is every page with a sidecar, not only the pages this run revisited. **[adapted]** Without a sidecar this port only knows the Claims its own Step 4 workers submitted, and that is sufficient: an unrevisited page's `sources` on disk already *is* its persisted projection, so re-deriving it would be a no-op write. So: for every concept page whose Step 4 worker submitted Claims (skipping any page the run deleted):
+**Then project this run's Claims evidence into OKF `sources`** (ported from upstream `synchronizeClaimSources` in `src/okf/claim-sources.ts`, new in 0.4.0 / #692; skipped pages excluded, per above). Upstream re-projects every page its session holds Claim state for — which on an update is every page with a sidecar, not only the pages this run revisited. **[adapted]** Without a sidecar this port only knows the Claims its own Step 4 workers submitted, and that is sufficient: an unrevisited page's `sources` on disk already *is* its persisted projection, so re-deriving it would be a no-op write. So: for every concept page whose Step 4 worker submitted Claims (skipping any page the run deleted):
 
 1. Collect that page's complete evidence-resource set and reduce each resource to its **whole-file** form — drop any `#Lx-Ly` fragment, so `repo://src/agent/index.ts#L40-L82` becomes `repo://src/agent/index.ts`. Precise ranges stay in the Claim; OKF provenance exposes source files.
 2. Read the page's current `sources`. Keep every entry that is *not* OpenWiki-owned — that is, every entry whose `id` does not start with `openwiki-source-`. A malformed `sources` value (not a list, or entries without a non-empty string `resource`) counts as empty and gets repaired by this projection.
@@ -235,7 +257,7 @@ printf '%s' 'repo://src/agent/index.ts' | shasum -a 256 | cut -c1-24   # → the
 ```
 
    giving `id: openwiki-source-<that 24-hex-character digest>` — the example resource above yields `openwiki-source-a953060a04ccefcf777de48e`. Stable ids let a later run replace or remove only its own projection.
-4. Write the page back only when the resulting `sources` list differs from the current one, replacing just that field and leaving every other front-matter line byte-for-byte. Rendered shape:
+4. Since 0.4.1 (#728) the pass is self-healing and byte-stable: run Step 2's front-matter repair over the page **before** reading `sources`, apply the projection to the repaired content, run the repair once more over the result, and then compare the **final bytes against the page as it was read**. Write only when they differ — so a repair alone is enough to justify a write, and a projection that changes nothing is not. Replace just the `sources` field and leave every other front-matter line byte-for-byte. Rendered shape:
 
 ```yaml
 sources:
@@ -255,11 +277,12 @@ date -u +%Y-%m-%dT%H:%M:%S.000Z
 
 For every concept page (same exclusions), recompute the body hash with Step 2's body-extraction command and compare it to the Step 2 baseline:
 
-- **New page, or body hash changed** → set `generated: {by: "<actor>", at: "<run timestamp>"}` and remove any `timestamp` field, which OKF v0.2 supersedes. Whitespace counts: any body change advances the stamp.
-- **Body unchanged** → restore the baseline exactly: re-set the `generated` event the page had before the run (a Step 4 rewrite may have dropped or altered it), or remove `generated` entirely if it had none. A front-matter-only change never advances the stamp.
+- **New page, or body hash changed** → set `generated: { by: "<actor>", at: "<run timestamp>" }` and remove any `timestamp` field, which OKF v0.2 supersedes. Whitespace counts: any body change advances the stamp. Then, since 0.4.1 (#730), **canonicalize the page's trailing line endings to exactly one LF** — and only those. Prose wrapping, indentation, tables, and every other authored choice stay untouched, and a page whose body did not change never passes through this normalization at all, so its bytes are preserved exactly.
+- **Body unchanged** → restore the baseline: re-set the `generated` event the page had before the run (a Step 4 rewrite may have dropped or altered it), or remove `generated` entirely if it had none. A front-matter-only change never advances the stamp. Since 0.4.1, **compare by meaning first**: if the event already on the page has the same `by` and `at` as the baseline, leave the page completely alone rather than re-rendering the field. That is what keeps an older `{by: …}` spelling from being rewritten into the new `{ by: … }` one on a page nobody touched.
 - The actor is the producing host, matching upstream's host registry: `claude-code`, `codex`, or `opencode` — **[adapted]** upstream's own runs stamp `openwiki/<version>`, which would misattribute this port's output.
-- Render it as a single-line flow mapping with JSON-quoted members, replacing an existing `generated:` line in place and leaving every other front-matter line untouched: `generated: {by: "claude-code", at: "2026-08-26T00:00:00.000Z"}`.
-- Write the page back only when the content changed.
+- Render it as a single-line flow mapping with JSON-quoted members **and a space inside each brace** (the spacing changed in 0.4.1, #728), replacing an existing `generated:` line in place and leaving every other front-matter line untouched: `generated: { by: "claude-code", at: "2026-08-26T00:00:00.000Z" }`.
+- Run Step 2's front-matter repair over the reconciled page before writing it, then write only when the content changed.
+- **This pass never fails the run** (since 0.4.1, #728): provenance is optional trust metadata, so a page that cannot be read is skipped and a write that fails is skipped, leaving the already-persisted page as the deterministic fallback rather than discarding the rest of a finalized wiki. Report which pages were skipped.
 
 Never author, edit, or remove `generated`, `verified`, `sources`, or `timestamp` during Step 4 — they are code-owned, which here means owned by this step.
 
@@ -279,6 +302,8 @@ Recompute the Step 2 content hash with the same command, then write `openwiki/.l
 ```
 
 Run the `date` and `git` commands — never guess the timestamp or the head. Report the recomputed hash's verdict to the user (changed → what changed; unchanged → the wiki was already accurate) even though it no longer gates the write.
+
+**If Step 4 skipped any page** (since 0.4.1, #732), write the metadata differently: `status: "interrupted"`, and `gitHead` set to the **previous run's recorded head** rather than the current one (upstream passes `baseGitHead` as an explicit override). Both matter and for the same reason — the next update must not treat this wiki as complete and current. An `interrupted` status defeats the early no-op exit, and rewinding `gitHead` keeps the changed-path and staleness evidence for the skipped page in view. Recording the current head here would make the skipped page invisible forever. Omit the key entirely when there was no previous head.
 
 Run this step even when the run fails after generating content (upstream persists metadata on the error path too): write the metadata before reporting the failure — with `status: "interrupted"` instead of `"complete"`, so the already-generated content stays diffable and the next update knows the wiki may be partial and does not skip (#365).
 
