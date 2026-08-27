@@ -14,7 +14,7 @@ sources:
     resource: repo://skills/openwiki-personal/references/sources.md
   - id: openwiki-source-f27335ea429d443b8de638e2
     resource: repo://skills/openwiki/SKILL.md
-generated: {by: "claude-code", at: "2026-08-26T00:12:15.000Z"}
+generated: { by: "claude-code", at: "2026-08-27T00:28:56.000Z" }
 ---
 
 # Personal wiki run
@@ -136,6 +136,10 @@ no longer a supported artifact.
 Four deterministic passes, in this order: Mermaid validation, directory index
 synchronization, internal-link validation, then generated-provenance reconciliation. The
 order is part of the contract — see [the OKF output contract](../concepts/okf-output.md).
+
+Since upstream 0.4.1 none of these can end the run over optional metadata: the provenance
+pass skips a page it cannot read or write, and the per-write front-matter check repairs
+what it can, warning only when the repaired bytes cannot be persisted.
 
 Claims are **repository-only**. A local wiki gets no sidecars, no `sources` projection, and
 no `verified` events, because upstream's Claims runtime is not constructed outside

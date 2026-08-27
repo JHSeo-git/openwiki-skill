@@ -12,7 +12,7 @@ sources:
     resource: repo://skills/openwiki/SKILL.md
   - id: openwiki-source-88378f6a3ac54313171799db
     resource: repo://skills/openwiki/references/prompt-page.md
-generated: {by: "claude-code", at: "2026-08-26T00:12:15.000Z"}
+generated: { by: "claude-code", at: "2026-08-27T00:28:56.000Z" }
 ---
 
 # OKF output contract
@@ -67,10 +67,14 @@ violation, not a shortcut:
 The rule is precise and matters for diff hygiene:
 
 - A **new page, or a page whose body hash changed**, gets the run's shared timestamp:
-  `generated: {by: "claude-code", at: "<run timestamp>"}`, and any legacy `timestamp` is
-  dropped. Whitespace counts as a body change.
-- A page whose **body is unchanged** has its prior event restored exactly, even if the
-  run's own edits dropped or altered it.
+  `generated: { by: "claude-code", at: "<run timestamp>" }`, and any legacy `timestamp` is
+  dropped. Whitespace counts as a body change. Such a page additionally has its **trailing
+  line endings canonicalized to exactly one LF** — and only those; prose wrapping,
+  indentation, and tables stay as authored.
+- A page whose **body is unchanged** has its prior event restored, and is compared **by
+  meaning** first: an event with the same `by` and `at` is left completely alone rather
+  than re-rendered. That is deliberate byte stability, and it is why older `{by: …}`
+  stamps survive on pages nobody edits while new writes use the `{ by: … }` spelling.
 
 The body is the content after the leading front-matter block, so a front-matter-only edit
 never advances the stamp. This is why the provenance pass runs **last**, after every other
@@ -79,6 +83,11 @@ those edits should look like a content change.
 
 The actor is the producing host — `claude-code`, `codex`, `opencode` — where upstream
 stamps its own version. See [the port contract](../architecture/port-contract.md) for why.
+
+Since 0.4.1 this pass **never fails a run**. Provenance is optional trust metadata, so a
+page that cannot be read is skipped and a write that fails is skipped, leaving the
+already-persisted page as the fallback. Losing a stamp is cheaper than discarding an
+otherwise-finalized wiki.
 
 ### `sources` — Claim evidence as provenance
 
@@ -107,24 +116,39 @@ documentation: a run reads it as scope and priority input and never rewrites it.
 Nothing in this port writes a `log.md`. Reserved-file handling would tolerate one, but the
 port deliberately does not generate what upstream does not.
 
-## Normalization repairs non-compliance
+## Repair, not rejection
 
-Before any authoring, every concept page is checked:
+Before any authoring, every concept page is repaired. Upstream 0.4.1 changed this from a
+rebuild into a **field-by-field repair**, because invalid *optional* metadata used to abort
+a whole run — a page with an empty `description` could stop a wiki from generating. Every
+path now ends in a page that validates.
 
-- Front matter parses as YAML **and** `type` is a non-empty string → left byte-for-byte
-  untouched, even if optional fields are junk. An author's `type` and custom fields are
-  never overwritten.
-- Otherwise → front matter is replaced with a minimal block carrying `type`, a `title`
-  derived from the first H1 (falling back to the filename), and `openwiki_generated: true`
-  as a flag that the metadata was code-derived.
+1. **Already valid → left byte-for-byte untouched.** Note this is stricter than the old
+   test, which accepted any page with a parseable block and a non-empty `type` and
+   tolerated junk in its optional fields. Junk is now repaired.
+2. **Block still parses → repaired in place**, keeping every other line and every producer
+   extension as written. `type` is derived when missing or unusable (and the page marked
+   `openwiki_generated: true`); `title` is derived alongside a derived `type`, or when a
+   `title` key is present but unusable; an unusable `description`, `resource`, `timestamp`,
+   `status`, or `stale_after` is **removed**; `tags`, `verified`, and `sources` are filtered
+   to their conformant entries; and a `generated` that is not a valid `{by, at?}` event is
+   removed.
+3. **Block unparseable, or the repair still does not validate → minimal derived block**,
+   carrying `type`, a `title` from the first H1 or the filename, and
+   `openwiki_generated: true`.
 
 A page worker that later touches a flagged page replaces that placeholder with accurate
 metadata grounded in the body and removes the flag.
 
-The rebuild would otherwise drop fields it does not know about, so it carries across
-verbatim: the `openwiki_translation_pending` control marker, and the structured v0.2
-families `generated`, `verified`, and `sources`. A page that is both non-compliant and
-stamped must not lose its provenance.
+The design principle behind step 2 is worth naming: **a trust assertion that cannot be
+proven conformant is removed, never rewritten.** Repairing a malformed `generated` or
+`verified` into a well-formed one would manufacture provenance the wiki cannot support, so
+the field goes away instead.
+
+Because step 2 preserves the original block outright, upstream's old carry-across lists no
+longer exist. The cost lands on step 3: when a block cannot be parsed at all, the
+`openwiki_translation_pending` marker and the code-owned `generated` / `verified` /
+`sources` families are lost, because nothing can read them back out of unparseable YAML.
 
 ## Deterministic directory indexes
 

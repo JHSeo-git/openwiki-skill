@@ -16,13 +16,13 @@ sources:
     resource: repo://skills/openwiki-personal/SKILL.md
   - id: openwiki-source-f27335ea429d443b8de638e2
     resource: repo://skills/openwiki/SKILL.md
-generated: {by: "claude-code", at: "2026-08-26T00:12:15.000Z"}
+generated: { by: "claude-code", at: "2026-08-27T00:28:56.000Z" }
 ---
 
 # openwiki-skill quickstart
 
 Agent skills that write, maintain, and answer from OpenWiki wikis — a port of
-[langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) **v0.4.0** for coding
+[langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) **v0.4.1** for coding
 agents such as Claude Code and Codex.
 
 Upstream is a CLI that drives a model through provider APIs. This repository drops that

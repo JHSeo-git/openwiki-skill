@@ -10,7 +10,7 @@ sources:
     resource: repo://skills/openwiki/SKILL.md
   - id: openwiki-source-88378f6a3ac54313171799db
     resource: repo://skills/openwiki/references/prompt-page.md
-generated: {by: "claude-code", at: "2026-08-26T00:12:15.000Z"}
+generated: { by: "claude-code", at: "2026-08-27T00:28:56.000Z" }
 ---
 
 # Claims and grounding
@@ -165,7 +165,9 @@ direction for a staleness check.
   submission gate, and only the finalize step turns them into front matter.
 - `openwiki/.claims` and the `verified` field are never authored by this port — not even
   as placeholders.
-- A page fails its submission gate, rather than being silently repaired, when it is
-  missing, unreadable, carries invalid OKF front matter, or submits no material Claim.
+- A page's submission gate **repairs before it judges** (upstream 0.4.1): recognized
+  invalid OKF metadata is repaired or removed deterministically first, and the gate fails
+  only on what no repair can fix — a missing or unreadable page, a shape that cannot be
+  rebuilt, storage that cannot be written, or a submission with no material Claim.
   [The repository wiki run](../workflows/repository-wiki-run.md) covers the full gate list
   and where it sits in the lifecycle.

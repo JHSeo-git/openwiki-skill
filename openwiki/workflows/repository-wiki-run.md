@@ -1,7 +1,7 @@
 ---
 type: Workflow
 title: Repository wiki run
-description: The seven-step repository lifecycle the openwiki skill executes — marker setup, context with evidence preflight and no-op check, prepare, plan, the per-page queue, finalize, metadata — including why init is destructive, why the preflight precedes the no-op check, and the gates a page must pass.
+description: The seven-step repository lifecycle the openwiki skill executes — marker setup, context with evidence preflight and no-op check, prepare, plan, the per-page queue, finalize, metadata — including why init is destructive, why the preflight precedes the no-op check, the gates a page must pass, and how a page that cannot be finished is skipped rather than aborting the run.
 tags: [workflow, lifecycle, planner, page-queue, finalize]
 sources:
   - id: openwiki-source-f27335ea429d443b8de638e2
@@ -10,7 +10,7 @@ sources:
     resource: repo://skills/openwiki/references/prompt-page.md
   - id: openwiki-source-12cc308cf6471b687af07d19
     resource: repo://skills/openwiki/references/prompt-planner.md
-generated: {by: "claude-code", at: "2026-08-26T00:12:15.000Z"}
+generated: { by: "claude-code", at: "2026-08-27T00:28:56.000Z" }
 ---
 
 # Repository wiki run
@@ -156,18 +156,41 @@ Two boundaries replace behavior earlier versions of this skill had:
   longer exist and any underscore-prefixed page path is rejected.
 
 A page is not done until it passes its gates: the file exists and is readable, its OKF
-front matter validates, every Claim carries at least one canonical `repo://` resource, no
-duplicate Claim or unfamiliar id is submitted, and the submission reconciles against the
-page's existing Claim set. An invalid page is **rejected, not repaired** — fix it and
-re-check.
+front matter validates **after a deterministic repair attempt** (upstream 0.4.1 repairs
+recognized invalid metadata first and fails only on what repair cannot fix), every Claim
+carries at least one canonical `repo://` resource, no duplicate Claim or unfamiliar id is
+submitted, and the submission reconciles against the page's existing Claim set.
+
+#### A page you cannot finish is skipped, not fatal
+
+Before upstream 0.4.1 a worker that could not complete aborted the whole update, discarding
+every page already written. The failure is now contained to its own page:
+
+1. **Snapshot** the page's exact current Markdown — or that it does not exist — before
+   working it.
+2. **If it cannot be completed**, restore the snapshot exactly (or delete the page if it
+   was not there), mark the job **skipped**, say which page and why, and move on. Never
+   leave a half-written page behind.
+3. **Keep going.** Skipped jobs block neither the queue nor finalization.
+
+One failure stays fatal: a page that cannot be *persisted at all*. A page that merely fails
+validation is correctable; storage that cannot be written is not.
+
+The point of the design is that a wiki is worth more partially refreshed than not refreshed
+at all — provided the next run knows to come back, which is Step 6's job.
 
 ### Step 5 — finalize
 
-In exactly this order: apply deletions, validate Mermaid, synchronize directory indexes,
-validate internal links, project Claim evidence into `sources`, reconcile `generated`
-provenance. Deletions come first so the index and link passes see the final page set;
-provenance comes last so the front-matter edits the other passes make do not register as
-body changes.
+In exactly this order: restore skipped pages, apply deletions, validate Mermaid,
+synchronize directory indexes, validate internal links, project Claim evidence into
+`sources`, reconcile `generated` provenance. Deletions come early so the index and link
+passes see the final page set; provenance comes last so the front-matter edits the other
+passes make do not register as body changes.
+
+Skipped pages are restored once more here — a later pass may have touched them — and are
+then **excluded** from the `sources` projection and from Claims reconciliation. Projecting
+an empty Claim set onto a skipped page would strip the grounding the previous run recorded,
+which is the opposite of leaving it alone.
 
 Deletions themselves are two-part: pages this run created that an invalidated plan
 abandoned, then the plan's explicit deletion set. Neither ever touches a page that existed
@@ -178,11 +201,18 @@ before the run and was not planned for deletion.
 Writes `openwiki/.last-update.json` — timestamp, command, head, model, status, language —
 on every completed run, so the content hash no longer gates the write, only the report.
 
-The failure path has two exceptions worth knowing. A failed init **that had a backup**
-restores it and writes **no** metadata, because the restored wiki's own metadata came back
-with it and an `interrupted` record on top would describe a wiki that no longer exists. A
-failed **first** init, with no prior wiki and so no backup, keeps its partial content and
-records `interrupted`.
+**If any page was skipped**, the metadata is written differently: `status: "interrupted"`,
+and `gitHead` rewound to the **previous** run's head rather than the current one. Both
+serve one purpose — the next update must not treat this wiki as complete and current. The
+`interrupted` status defeats the early no-op exit, and the rewound head keeps the changed
+paths and staleness evidence for the skipped page in view. Recording the current head would
+make that page invisible to every future update.
+
+The failure path has two more exceptions. A failed init **that had a backup** restores it
+and writes **no** metadata, because the restored wiki's own metadata came back with it and
+an `interrupted` record on top would describe a wiki that no longer exists. A failed
+**first** init, with no prior wiki and so no backup, keeps its partial content and records
+`interrupted`.
 
 ## Runtime evidence variant
 
