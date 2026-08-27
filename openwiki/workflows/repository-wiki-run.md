@@ -10,7 +10,7 @@ sources:
     resource: repo://skills/openwiki/references/prompt-page.md
   - id: openwiki-source-12cc308cf6471b687af07d19
     resource: repo://skills/openwiki/references/prompt-planner.md
-generated: { by: "claude-code", at: "2026-08-27T00:28:56.000Z" }
+generated: { by: "claude-code", at: "2026-08-27T08:35:20.000Z" }
 ---
 
 # Repository wiki run
@@ -114,10 +114,16 @@ path.
 Then, for both modes: snapshot the content hash, normalize front matter, and capture the
 provenance baseline (each page's body hash plus its existing `generated` event).
 
-Upstream additionally fingerprints every source file here and re-checks it at finalize,
-invalidating the plan on drift — a gate a lifecycle spanning processes needs. The port
-instead notes the head and worktree state and reports at the end if either moved, so a plan
-built against older source is surfaced rather than shipped silently.
+Upstream additionally fingerprints every source file here and re-checks it later. Until
+0.4.2 a mid-run change **invalidated the plan** and forced a full replan; upstream 0.4.3
+deleted that loop on the same reasoning as a skipped page — a partially refreshed wiki plus
+a forced follow-up beats discarding the work. Drift is now merely *detected*, twice: before
+the finalize passes and again after Claims finalization, so a change that starts mid-finalize
+still counts.
+
+The port does the cheap equivalent — record the head and worktree state, re-check at both
+points — and Step 6 turns a positive result into metadata rather than only a sentence in the
+report.
 
 ### Step 3 — plan
 
@@ -167,7 +173,9 @@ Before upstream 0.4.1 a worker that could not complete aborted the whole update,
 every page already written. The failure is now contained to its own page:
 
 1. **Snapshot** the page's exact current Markdown — or that it does not exist — before
-   working it.
+   working it. An absent page is a *valid* snapshot, never a failure: it is the normal case
+   on init and for every newly planned page. Upstream had to fix precisely this in 0.4.2,
+   where a missing page could throw and abort the run.
 2. **If it cannot be completed**, restore the snapshot exactly (or delete the page if it
    was not there), mark the job **skipped**, say which page and why, and move on. Never
    leave a half-written page behind.
@@ -192,21 +200,28 @@ then **excluded** from the `sources` projection and from Claims reconciliation. 
 an empty Claim set onto a skipped page would strip the grounding the previous run recorded,
 which is the opposite of leaving it alone.
 
-Deletions themselves are two-part: pages this run created that an invalidated plan
-abandoned, then the plan's explicit deletion set. Neither ever touches a page that existed
-before the run and was not planned for deletion.
+Deletions themselves are two-part: pages this run created that a superseded plan abandoned,
+then the plan's explicit deletion set. Neither ever touches a page that existed before the
+run and was not planned for deletion. Since 0.4.3 removed in-run replanning, the first part
+has nothing left to find in practice — it remains as the guard for a plan that was replaced.
 
 ### Step 6 — metadata
 
 Writes `openwiki/.last-update.json` — timestamp, command, head, model, status, language —
 on every completed run, so the content hash no longer gates the write, only the report.
 
-**If any page was skipped**, the metadata is written differently: `status: "interrupted"`,
-and `gitHead` rewound to the **previous** run's head rather than the current one. Both
-serve one purpose — the next update must not treat this wiki as complete and current. The
+**If any page was skipped, or the source changed mid-run**, the metadata is written
+differently: `status: "interrupted"`, and `gitHead` rewound to the **previous** run's head
+rather than the current one — or omitted entirely when there is no previous head, which
+upstream 0.4.3 made explicit after the old fallback silently recorded the current head. Both
+serve one purpose: the next update must not treat this wiki as complete and current. The
 `interrupted` status defeats the early no-op exit, and the rewound head keeps the changed
-paths and staleness evidence for the skipped page in view. Recording the current head would
-make that page invisible to every future update.
+paths and staleness evidence in view. Recording the current head would make the skipped page,
+or the source change, invisible to every future update.
+
+On drift the run also says so plainly — the wiki was finalized without advancing its source
+checkpoint, so a follow-up update is needed. The metadata forces that run; the message
+explains it.
 
 The failure path has two more exceptions. A failed init **that had a backup** restores it
 and writes **no** metadata, because the restored wiki's own metadata came back with it and
