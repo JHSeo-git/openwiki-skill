@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.1 (2026-08-27)
 
 - Upstream sync: bump pin `27d835c` → `8e5175b` (upstream v0.4.1). Two ports, both about a run surviving trouble instead of aborting. Out of scope: the visualizer overlay/reader fix (#724), upstream's own wiki updates (#733/#736), and the version-packages chore (#729).
 
