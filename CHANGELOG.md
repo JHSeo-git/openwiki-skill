@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.3 (2026-08-27)
 
 - Upstream sync: bump pin `8e5175b` → `5020dbb` (upstream v0.4.3, taking v0.4.2 along the way). Two one-fix releases, both hardening the lifecycle 0.4.0/0.4.1 introduced rather than adding surface. Out of scope: the two version-packages chores (#738/#741).
 
