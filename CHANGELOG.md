@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Upstream sync: bump pin `8e5175b` → `5020dbb` (upstream v0.4.3, taking v0.4.2 along the way). Two one-fix releases, both hardening the lifecycle 0.4.0/0.4.1 introduced rather than adding surface. Out of scope: the two version-packages chores (#738/#741).
+
+- Mid-run source drift finalizes once instead of replanning (#740) — `skills/openwiki/SKILL.md` Steps 2 and 6. Until 0.4.2 a repository change during a run invalidated the whole plan and the runner looped to replan and redo everything; 0.4.3 deletes that loop (and the `replanning` progress stage nothing emits any more), detects drift **twice** — before the finalize passes and again after Claims finalization, so a change starting mid-finalize still counts — and then finishes once, recording that a later update is due. The port's Step 2 note flips from `[omitted]` to `[adapted]`: it keeps the cheap `git rev-parse HEAD` + worktree check but now re-checks at both points, and Step 6 treats drift exactly like a skipped page — `status: "interrupted"` with `gitHead` rewound — instead of only mentioning it in the final report. That is strictly better: a report does not survive the session, and metadata forces the follow-up run. The user-facing wording follows upstream's: the wiki was finalized without advancing its source checkpoint.
+
+- `gitHead` omission on an interrupted run is now upstream-explicit (#740). `writeLastUpdateMetadata`'s override accepts `null` for "no successful baseline exists", where it previously fell back to the current head — the bug being that a first-ever interrupted run would record the head it had just failed to document and make that work invisible forever. This port already specified the omission when it ported #732; the note now attributes it and UPSTREAM.md records the signature change.
+
+- A page that does not exist yet snapshots as absent (#737) — `skills/openwiki/SKILL.md` Step 4. Upstream's snapshot could throw on a missing page because a read may raise ENOENT rather than returning a not-found result, which aborted exactly the common case: init, and any update adding a page. The port's Step 4 already said "or that it does not exist yet", so no rule changed; it now states outright that an absent page is a valid snapshot and never a failure, with the upstream fix cited so a later sync does not read the sentence as an accident.
+
 ## 0.4.1 (2026-08-27)
 
 - Upstream sync: bump pin `27d835c` → `8e5175b` (upstream v0.4.1). Two ports, both about a run surviving trouble instead of aborting. Out of scope: the visualizer overlay/reader fix (#724), upstream's own wiki updates (#733/#736), and the version-packages chore (#729).
