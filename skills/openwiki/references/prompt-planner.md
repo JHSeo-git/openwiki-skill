@@ -1,6 +1,6 @@
 # Planning phase — planner prompt, submission schema, and plan validation
 
-> Reproduced from upstream `src/agent/repository-prompts.ts` `createRepositoryPlannerPrompt` (v0.4.3, unchanged since 0.4.0), with its interpolated context blocks rendered in place as SKILL.md Step 3 describes. The submission schema is upstream `src/agent/repository-runner.ts` `PlanSchema`; the validation rules are upstream `src/generation/page-jobs.ts` `createRepositoryPlan`. **[adapted]** upstream's `/`-rooted virtual paths (`/openwiki/quickstart.md`) are the wiki's canonical page identifiers throughout the lifecycle — keep writing them that way in the plan, and read `/openwiki/x.md` as the real repo-relative file `openwiki/x.md` when you touch the filesystem.
+> Reproduced from upstream `src/agent/repository-prompts.ts` `createRepositoryPlannerPrompt` (v0.5.0), with its interpolated context blocks rendered in place as SKILL.md Step 3 describes. The submission schema is upstream `src/agent/repository-runner.ts` `PlanSchema`; the validation rules are upstream `src/generation/page-jobs.ts` `createRepositoryPlan`. **[adapted]** upstream's `/`-rooted virtual paths (`/openwiki/quickstart.md`) are the wiki's canonical page identifiers throughout the lifecycle — keep writing them that way in the plan, and read `/openwiki/x.md` as the real repo-relative file `openwiki/x.md` when you touch the filesystem.
 >
 > Since 0.4.0 (#713) repository generation is a two-role lifecycle: **one bounded planner** decides the complete page set, then **one fresh worker per page** writes it (`references/prompt-page.md`). Upstream gives the planner read-only filesystem tools (`read_file`, `ls`, `glob`, `grep`), no shell, no write access to any wiki page, and strips the delegation tool — **[adapted]** hold yourself to the same boundary while planning: research read-only, write nothing, and do not hand the planning out to a subagent.
 
@@ -24,9 +24,19 @@ User and connector planning context (*rendered only when the run has one — her
 
 > *(that text)*
 
-Changed repository paths (*update runs only — upstream `getRepositoryChangedPaths`: the union of `git diff --name-only <baseGitHead>..HEAD`, `git diff --name-only HEAD`, and `git ls-files --others --exclude-standard`, dropping everything under `openwiki/` and everything excluded by `.openwikiignore`, sorted; history lookup failures deliberately yield an empty list rather than failing the run. Rendered as one `- <path>` bullet per path, or `- (none)`*):
+*(Update runs only — the whole block below, through the windows, replaces the flat "Changed repository paths" list upstream rendered until 0.4.3. New in 0.5.0, #720.)*
 
-> `- <path>`
+For update, evaluate each existing page inside its own committed update window. A page already advanced by a merged partial update must not be regenerated for changes at or before its baseline. Schedule it only when changes after that baseline, current Claims issues, language rewriting, navigation changes, or cross-page consistency require work.
+
+Committed per-page update windows (*upstream `getRepositoryPageUpdateWindows`: existing pages grouped by the `gitHead` recorded for them in the committed `openwiki/.page-manifest.json` ledger, each cohort carrying its own changed-path list from `getRepositoryChangedPaths` — the union of `git diff --name-only <baseline>..HEAD`, `git diff --name-only HEAD`, and `git ls-files --others --exclude-standard`, dropping everything under `openwiki/` and everything excluded by `.openwikiignore`, sorted; history lookup failures deliberately yield an empty list rather than failing the run. A page with no recorded baseline goes into the `fullReview` window. Rendered as one cohort per baseline, or `- (none)`*):
+
+> ```
+> - Baseline <gitHead, or the literal text: unknown (full review required)>:
+>   - Pages: <comma-separated pages, or (none)>
+>   - Changed paths: <comma-separated paths, or (none)>
+> ```
+
+**[adapted]** SKILL.md Step 1 fills this block in from whatever baselines it can actually prove. When `openwiki/.page-manifest.json` exists (a native or CI run wrote it), read the per-page `gitHead` values out of it and render the real cohorts — this is the whole point of #720, and it is why merging a partially-failed CI PR is worth doing. When it does not exist, this port has exactly **one** provable baseline, the `gitHead` in `openwiki/.last-update.json`, so the block degrades to a single window listing every existing page, or to `fullReview` when no baseline was recorded. Read a window whose `Changed paths` is `(none)` as upstream's fast-forward case: nothing visible moved since that cohort's baseline, so those pages need no source-driven work — only Claims issues, a language switch, or navigation changes can still schedule them.
 
 Claims requiring attention (*update runs only — the deterministic staleness preflight from SKILL.md Step 1, rendered as one bullet per issue or `- (none)`. Upstream's line is `- <page>: <claimId> (stale|unresolved) -> <resource>, <resource>`;* **[adapted]** *this port has no per-Claim sidecar, so the bullet carries the page, the issue kind, and the changed or missing `repo://` evidence resources it read from the page's own OKF `sources` front matter*):
 
@@ -47,6 +57,8 @@ Upstream exposes exactly one completion tool to the planner:
 > **submit_plan** — Submit the final canonical OpenWiki page plan. This is the only completion action for planning.
 
 **[adapted]** You have no such tool. Produce the same payload as your own plan record and validate it against the rules below before starting the page loop; you may keep it in your working notes, but do **not** write it into the wiki — `_plan.md` and `_skeleton.md` no longer exist (upstream 0.4.0 replaced both with the code-owned `openwiki/.run.json` checkpoint, and any `_`-prefixed page path is rejected outright).
+
+Since 0.5.0 (#789) submitting again is **not** an error, but replacing the plan is: upstream dropped the "already called" guard and now re-validates the second payload and compares it against the persisted plan ignoring job ids, accepting an identical semantic plan and rejecting a different one (`This OpenWiki run already has a different persisted plan.`). The rule that matters for you: **the page set is fixed once you start writing pages.** Restating the plan you already fixed is harmless; quietly revising it mid-queue is not — the pages already written were planned against the old set, and page paths are final once submitted.
 
 Payload shape (upstream `PlanSchema` — no other keys are accepted):
 

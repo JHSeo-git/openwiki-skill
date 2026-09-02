@@ -10,18 +10,18 @@
 
 </div>
 
-Write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.4.3 for coding agents like Claude Code and Codex.
+Write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.5.0 for coding agents like Claude Code and Codex.
 
 The upstream CLI drives an LLM through provider APIs. This port drops that plumbing: your coding agent already *is* the LLM, with filesystem and git tools attached, so it executes the same workflow directly — the upstream system prompts are reproduced verbatim inside the skills, with harness differences marked `[adapted]`. No API key, no runtime, no configuration.
 
 **openwiki-skill gives you:**
 
-- **Agent-written repo docs that stay accurate** — a bounded planner fixes the page set, one worker writes each page and records its material Claims against `repo://` evidence, and updates revisit exactly the pages whose evidence moved. Clean no-ops when nothing relevant changed.
+- **Agent-written repo docs that stay accurate** — a bounded planner fixes the page set, one worker writes each page and records its material Claims against `repo://` evidence, and updates revisit exactly the pages whose evidence moved, each evaluated against the last commit it was actually verified against rather than one wiki-wide baseline. Clean no-ops when nothing relevant changed; a run that stops early leaves its finished pages committable and flags the rest as still owed.
 - **A personal knowledge wiki** fed by your own sources — MCP servers, web search, local repos — instead of upstream's OAuth connectors.
 - **Wiki-first Q&A** that answers from either wiki, citing pages and their inline source references.
 - **Open Knowledge Format** ([OKF v0.2](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)) output: YAML front matter on every concept page (only `type` required; producer extensions preserved), code-owned `generated` provenance stamped on every body change, per-page `sources` evidence projected from the run's Claims, an evidence-backed concept graph, deterministically generated `index.md` per directory, and automatic normalization of non-compliant pages — wikis stay interoperable with the upstream CLI, so either tool can continue a wiki the other started.
 - **Validated rendering after every run** — broken Mermaid fences degrade to text fences instead of breaking the page, and broken internal links or heading anchors are stamped in place for the next update to repair.
-- **Multilingual wikis** (BCP-47): the output language persists in run metadata, index headings localize, and switching it rewrites every page in the new language.
+- **Multilingual wikis** (BCP-47): the output language persists in run metadata, index headings localize, and switching it rewrites every page in the new language. A request naming no identifiable language stops the run instead of quietly producing an English wiki.
 - **`.openwikiignore`** — a gitignore-style read boundary for repository runs: matching paths are never read, scanned, or documented.
 - **Keyless scheduled updates** via local cron or a cloud routine under your subscription, plus CI templates for the API-key route.
 
@@ -72,7 +72,7 @@ This is a read boundary: ignored paths are never read, scanned, or reproduced in
 
 ## Automation
 
-[skills/openwiki/references/automation.md](skills/openwiki/references/automation.md) covers keyless scheduled updates (local cron or a cloud routine under your subscription — no API key), a scoped permission allowlist for headless runs, CI templates (GitHub Actions PR flow, GitLab MR flow, Bitbucket Pipelines PR flow — CI needs `ANTHROPIC_API_KEY` or a `claude setup-token` token; all clone full history), and a Codex headless note.
+[skills/openwiki/references/automation.md](skills/openwiki/references/automation.md) covers keyless scheduled updates (local cron or a cloud routine under your subscription — no API key), a scoped permission allowlist for headless runs, CI templates (GitHub Actions PR flow, GitLab MR flow, Bitbucket Pipelines PR flow — CI needs `ANTHROPIC_API_KEY` or a `claude setup-token` token; all clone full history and all open the PR even when the run fails, so a partial update's finished pages can be merged as the next run's starting point), and a Codex headless note.
 
 ## Upstream
 
