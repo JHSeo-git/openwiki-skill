@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 (2026-09-02)
 
 - Upstream sync: bump pin `5020dbb` → `64903f9` (upstream v0.5.0). One minor release with a real architectural addition and two behavior reversals worth reading carefully. Out of scope: provider and transport plumbing (#743 Bedrock `maxTokens`, #744 forced Copilot streaming, #416 OpenRouter debug-fetch concurrency), connector runtime fixes (#414), the Windows fingerprint stat-identity fix (#781 — this port has no fingerprint), and upstream's own wiki updates (#747/#757/#759/#764/#770/#773/#785) plus the version-packages chore (#754).
 
