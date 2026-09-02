@@ -14,7 +14,7 @@ sources:
     resource: repo://skills/openwiki/SKILL.md
   - id: openwiki-source-88378f6a3ac54313171799db
     resource: repo://skills/openwiki/references/prompt-page.md
-generated: {by: "claude-code", at: "2026-08-26T00:12:15.000Z"}
+generated: { by: "claude-code", at: "2026-09-02T00:49:42.000Z" }
 ---
 
 # The port contract
@@ -93,13 +93,31 @@ see [the OKF output contract](../concepts/okf-output.md) for the artifact itself
 Two deliberate exceptions, both recorded where they occur:
 
 - **Producer identity.** Upstream stamps its own version as the producing actor; this
-  port stamps the host agent (`claude-code`, `codex`, `opencode`) instead, because
-  claiming upstream's identity for output upstream did not generate would misattribute
-  it.
+  port stamps the host agent (`claude-code`, `codex`, `opencode`, `cursor`) instead,
+  because claiming upstream's identity for output upstream did not generate would
+  misattribute it. Since upstream 0.5.0 a single wiki may carry *different* producers on
+  different pages — a durable run can be resumed by another host — so the port must
+  never normalize another host's actor onto a page it did not itself change.
 - **Code-owned state with no reproducible format.** Where upstream persists state whose
   format only its own code can produce or interpret, the port omits it rather than
   inventing a look-alike. [Claims and grounding](../concepts/claims-and-grounding.md)
-  covers the one significant case.
+  covers the two cases, which share one root: the `openwiki/.claims/` sidecar, and the
+  `openwiki/.page-manifest.json` page-coverage ledger whose entries are only valid when
+  a sidecar backs them.
+
+The manifest sharpens the exception into a rule worth naming, because it is the first
+piece of upstream state the port **reads without writing**:
+
+> Omitting a state file does not mean ignoring it. Where a file's *consumers* need only
+> the parts the port can verify, read those parts; only the write is withheld.
+
+The ledger records, per page, the commit that page was last verified against. Grouping
+pages by that commit needs nothing but the commit itself, so an update run reads it and
+plans each page against its own baseline — which is what makes merging a partially
+failed native or CI run worthwhile even when the follow-up runs here. Fabricating an
+*entry* would assert a machine verification that never happened; declining to *read* one
+would throw away work someone already paid for. Both halves are the same fidelity
+argument, applied in opposite directions.
 
 ## Invariants for anyone changing this repository
 

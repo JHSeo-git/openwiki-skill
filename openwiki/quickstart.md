@@ -16,13 +16,13 @@ sources:
     resource: repo://skills/openwiki-personal/SKILL.md
   - id: openwiki-source-f27335ea429d443b8de638e2
     resource: repo://skills/openwiki/SKILL.md
-generated: { by: "claude-code", at: "2026-08-27T08:35:20.000Z" }
+generated: { by: "claude-code", at: "2026-09-02T00:49:42.000Z" }
 ---
 
 # openwiki-skill quickstart
 
 Agent skills that write, maintain, and answer from OpenWiki wikis — a port of
-[langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) **v0.4.3** for coding
+[langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) **v0.5.0** for coding
 agents such as Claude Code and Codex.
 
 Upstream is a CLI that drives a model through provider APIs. This repository drops that
@@ -64,6 +64,18 @@ destructive.
 
 Both produce the same artifact shape: OKF v0.2 concept pages, deterministic per-directory
 indexes, code-owned `generated` provenance, self-correcting Mermaid and link validation.
+
+Two properties of the repository lifecycle are easy to miss and shape how updates behave:
+
+- **A partial run is a result, not a loss.** A page that cannot be finished is skipped
+  rather than aborting the run, and the metadata then records `status: "interrupted"` with
+  the last fully documented commit — so the finished pages are committable and the next run
+  knows to come back. Since upstream 0.5.0 the CI templates publish that partial output
+  deliberately, expecting it to be merged as the next run's starting point.
+- **Two files under `openwiki/` are read-only.** `openwiki/.run.json` and
+  `openwiki/.page-manifest.json` belong to the native CLI. The port reads the manifest's
+  committed per-page baselines to avoid regenerating work a native or CI run already did,
+  and writes neither file — an entry would require the `.claims` sidecar this port omits.
 
 ## Invariants
 

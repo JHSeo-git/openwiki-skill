@@ -14,7 +14,7 @@ sources:
     resource: repo://skills/openwiki-personal/references/sources.md
   - id: openwiki-source-f27335ea429d443b8de638e2
     resource: repo://skills/openwiki/SKILL.md
-generated: { by: "claude-code", at: "2026-08-27T00:28:56.000Z" }
+generated: { by: "claude-code", at: "2026-09-02T00:49:42.000Z" }
 ---
 
 # Personal wiki run
@@ -81,6 +81,19 @@ if the user asked, else the wiki's persisted language, else `en`. An update with
 language request inherits the persisted value, so the wiki never drifts into a mix of
 languages, and English is always materialized as an explicit `en` rather than encoded by an
 absent field.
+
+**An unrecognizable language request stops the run.** Upstream 0.5.0 reversed itself here:
+it used to warn and generate in English, and now it rejects before touching anything. The
+reason is that the fallback was self-entrenching — English got persisted as the wiki's
+language, and the next run inherited it rather than correcting the typo, so the user could
+not undo the mistake without deleting OpenWiki's own state. Failing at the entry, before
+any write, is the only point where the error is still cheap.
+
+One adaptation matters: upstream validates a `--language` flag, so its advice is to pass a
+code rather than a language name. This port's input is prose, so mapping "Korean" to `ko`
+*is* the skill's job. It stops only when no real language is identifiable at all — an
+unresolvable typo, an invented tag, an ambiguous request — and never silently defaults to
+English.
 
 There is no early no-op check here. Upstream's precheck is repository-mode only — it
 depends on git evidence a local wiki does not have.

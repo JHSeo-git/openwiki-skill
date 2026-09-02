@@ -12,7 +12,7 @@ sources:
     resource: repo://skills/openwiki/SKILL.md
   - id: openwiki-source-88378f6a3ac54313171799db
     resource: repo://skills/openwiki/references/prompt-page.md
-generated: { by: "claude-code", at: "2026-08-27T00:28:56.000Z" }
+generated: { by: "claude-code", at: "2026-09-02T00:49:42.000Z" }
 ---
 
 # OKF output contract
@@ -81,8 +81,17 @@ never advances the stamp. This is why the provenance pass runs **last**, after e
 finalize pass: the index, link, and `sources` passes all edit front matter, and none of
 those edits should look like a content change.
 
-The actor is the producing host — `claude-code`, `codex`, `opencode` — where upstream
-stamps its own version. See [the port contract](../architecture/port-contract.md) for why.
+The actor is the producing host — `claude-code`, `codex`, `opencode`, `cursor` — where
+upstream stamps its own version. See [the port
+contract](../architecture/port-contract.md) for why.
+
+**The actor is per page, not per wiki.** Upstream 0.5.0 lets a durable run be resumed by a
+different host, so it records which producer completed each page and hands the provenance
+pass a per-page actor map instead of one actor for the whole run. A wiki can therefore
+legitimately carry `codex` on one page and `claude-code` on the next, and neither is
+wrong. The body-unchanged rule above is what protects this — a page you did not change
+keeps its own event — so the instruction is simply to leave that protection in place and
+never normalize another host's actor onto a page this run did not touch.
 
 Since 0.4.1 this pass **never fails a run**. Provenance is optional trust metadata, so a
 page that cannot be read is skipped and a write that fails is skipped, leaving the

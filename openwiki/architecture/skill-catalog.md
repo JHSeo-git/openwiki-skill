@@ -24,7 +24,7 @@ sources:
     resource: repo://skills/openwiki/references/prompt-page.md
   - id: openwiki-source-12cc308cf6471b687af07d19
     resource: repo://skills/openwiki/references/prompt-planner.md
-generated: {by: "claude-code", at: "2026-08-26T00:12:15.000Z"}
+generated: { by: "claude-code", at: "2026-09-02T00:49:42.000Z" }
 ---
 
 # Skill catalog and boundaries
@@ -54,7 +54,10 @@ overlaps:
 
 - `openwiki` writes only under the target repository's `openwiki/` directory, and only
   its own Step 0 may touch root `AGENTS.md` / `CLAUDE.md`. The documentation work itself
-  never touches them.
+  never touches them. Two files *inside* that directory are carved out as read-only
+  because the native CLI owns them — `openwiki/.run.json` and, since upstream 0.5.0,
+  `openwiki/.page-manifest.json`. The write boundary is therefore narrower than the
+  directory: everything under `openwiki/` except those two.
 - `openwiki-personal` writes only under `~/.openwiki/wiki`, with the standing wiki brief
   at `~/.openwiki/INSTRUCTIONS.md` as its single exception, and only when the user
   supplies the goal.

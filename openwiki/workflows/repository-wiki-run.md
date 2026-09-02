@@ -10,7 +10,7 @@ sources:
     resource: repo://skills/openwiki/references/prompt-page.md
   - id: openwiki-source-12cc308cf6471b687af07d19
     resource: repo://skills/openwiki/references/prompt-planner.md
-generated: { by: "claude-code", at: "2026-08-27T08:35:20.000Z" }
+generated: { by: "claude-code", at: "2026-09-02T00:49:42.000Z" }
 ---
 
 # Repository wiki run
@@ -86,9 +86,32 @@ Only Step 0 may touch these files. The documentation work never does.
 
 ### Step 1 — context, preflight, no-op
 
-Reads run metadata and the wiki brief, resolves the effective language, loads
-`.openwikiignore`, and reports any `openwiki/.run.json` left by an interrupted upstream CLI
-run without reading, deleting, or writing one.
+Reads run metadata and the wiki brief, resolves the effective language, and loads
+`.openwikiignore`. Since 0.5.0 an **unrecognizable language request stops the run here**,
+before any write, rather than warning and generating in English — the old fallback
+persisted the wrong language and the next run inherited it, so the mistake could not be
+undone without deleting OpenWiki's own state.
+
+Then the two native-CLI lifecycle files, both of which the port refuses to write:
+
+| File | What it is | What the port does |
+|---|---|---|
+| `openwiki/.run.json` | Transient checkpoint from an interrupted native run | Reports it; never reads it as instructions, never deletes or writes one |
+| `openwiki/.page-manifest.json` | **Committed** per-page coverage ledger, new in 0.5.0 | Reads each entry's `gitHead`; never writes, deletes, or repairs it |
+
+The manifest read is what upgrades update planning. Each entry records the commit its page
+was last verified against, so pages are grouped into **per-page update windows** — cohorts
+sharing a baseline, each with its own changed-path set — and a page whose baseline already
+covers a change is not regenerated for it. A page with no entry falls into a full-review
+cohort. With no manifest present the port has exactly one provable baseline, the recorded
+`gitHead`, so the whole wiki forms a single window; that is what this port did before
+0.5.0. A cohort whose changed-path set is empty needs no source-driven work, which is how
+upstream's separate baseline fast-forward falls out of the window itself here.
+
+Why the write is withheld, and why that is safe, is [Claims and
+grounding](../concepts/claims-and-grounding.md)'s subject: an entry is only valid when a
+`.claims` sidecar backs it, so the port cannot build one, and a later native run correctly
+treats port-authored coverage as unverifiable and re-reviews it.
 
 Then the **evidence preflight** — and its position matters. Upstream deliberately runs
 Claims validation *before* no-op detection, so **a clean `git status` cannot hide stale
@@ -96,11 +119,19 @@ grounding**. A repository whose source moved in ways git has already recorded as
 and clean would otherwise look current while its pages cite code that changed.
 [Claims and grounding](../concepts/claims-and-grounding.md) covers the classification.
 
-The no-op check then requires a clean worktree and an unmoved head, ignoring the metadata
-file itself and any `.openwikiignore`-excluded paths. Since 0.4.0 a no-op still **refreshes
-`.last-update.json`** — carrying the previous run's model and language forward with a fresh
-timestamp — because a no-op run still means the wiki was checked. It is the run's only
-write; nothing else executes.
+The no-op check then requires a clean worktree and an unmoved head, ignoring the status
+lines for the two files the lifecycle itself rewrites — `.last-update.json` and, since
+0.5.0, `.page-manifest.json` — plus any `.openwikiignore`-excluded paths. Since 0.4.0 a
+no-op still **refreshes `.last-update.json`** — carrying the previous run's model and
+language forward with a fresh timestamp — because a no-op run still means the wiki was
+checked. It is the run's only write; nothing else executes.
+
+One asymmetry there is deliberate and easy to get backwards: the manifest's git-status line
+is ignored by the no-op check, but the manifest is **not** excluded from the content
+snapshot, because it is committed wiki output and a change to it is a real content change.
+Upstream's one gate the port does *not* reproduce is its requirement that every page have a
+manifest entry before a no-op is allowed — that test only works for a producer that records
+entries, and applying it here would turn every future update into a full review.
 
 ### Step 2 — prepare
 
@@ -164,8 +195,24 @@ Two boundaries replace behavior earlier versions of this skill had:
 A page is not done until it passes its gates: the file exists and is readable, its OKF
 front matter validates **after a deterministic repair attempt** (upstream 0.4.1 repairs
 recognized invalid metadata first and fails only on what repair cannot fix), every Claim
-carries at least one canonical `repo://` resource, no duplicate Claim or unfamiliar id is
-submitted, and the submission reconciles against the page's existing Claim set.
+carries at least one canonical `repo://` resource, no duplicate Claim is submitted and no
+id receives more than one decision, and the reconciliation leaves the page with at least
+one material Claim.
+
+Since 0.5.0 that reconciliation is **sparse**: a worker submits only the decisions its
+edits require, and an omitted issue-free Claim is retained rather than retracted. The one
+omission the gate refuses is a Claim carrying a `stale` or `unresolved` issue — that is
+exactly the case where silence would skip required grounding work. In this port, which has
+no Claim ids to name, the rule applies per page: every resource the preflight flagged must
+end up either re-cited after an actual recheck, or no longer cited with the prose it
+supported corrected. [Claims and grounding](../concepts/claims-and-grounding.md) has the
+full table and how much of the sparse machinery is live here.
+
+Restating an already-fixed plan is not an error, but replacing it is. Upstream 0.5.0
+dropped its "already submitted" guard and instead compares a second submission against the
+persisted plan, accepting an identical one and rejecting a different one. The rule that
+survives for a port with no tool: **the page set is fixed once the queue starts** — pages
+already written were planned against it.
 
 #### A page you cannot finish is skipped, not fatal
 
@@ -178,7 +225,10 @@ every page already written. The failure is now contained to its own page:
    where a missing page could throw and abort the run.
 2. **If it cannot be completed**, restore the snapshot exactly (or delete the page if it
    was not there), mark the job **skipped**, say which page and why, and move on. Never
-   leave a half-written page behind.
+   leave a half-written page behind. A delete reporting the file was already absent is
+   *success*: upstream had to widen that check in 0.5.0 because its backends spell the
+   outcome two different ways, and a rollback treating "already gone" as an error aborts a
+   run for no reason.
 3. **Keep going.** Skipped jobs block neither the queue nor finalization.
 
 One failure stays fatal: a page that cannot be *persisted at all*. A page that merely fails
@@ -222,6 +272,17 @@ or the source change, invisible to every future update.
 On drift the run also says so plainly — the wiki was finalized without advancing its source
 checkpoint, so a follow-up update is needed. The metadata forces that run; the message
 explains it.
+
+This metadata is also **this port's answer to upstream's page manifest.** Upstream 0.5.0
+made partial progress a publishable result: it commits the pages a run finished even when
+the run failed, and its CI opens the pull request anyway so that progress can be merged as
+the next run's baseline. Upstream's baseline is the per-page manifest entry each completed
+page earned; the port's is exactly what this step writes — the finished pages, plus
+`status: "interrupted"` and a rewound head, which together say "this much is done, the rest
+is still owed." The practical consequence for a run that ends partway: report which pages
+landed and which were skipped, and treat the result as committable rather than something to
+tidy away. [Keeping wikis fresh automatically](../operations/automation.md) carries the
+matching CI shape.
 
 The failure path has two more exceptions. A failed init **that had a backup** restores it
 and writes **no** metadata, because the restored wiki's own metadata came back with it and

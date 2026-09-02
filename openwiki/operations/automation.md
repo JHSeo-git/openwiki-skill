@@ -14,7 +14,7 @@ sources:
     resource: repo://skills/openwiki/references/automation.md
   - id: openwiki-source-11012093e98a6994fe87df7b
     resource: repo://skills/openwiki/references/runtime-evidence.md
-generated: {by: "claude-code", at: "2026-08-26T00:12:15.000Z"}
+generated: { by: "claude-code", at: "2026-09-02T00:49:42.000Z" }
 ---
 
 # Keeping wikis fresh automatically
@@ -63,6 +63,32 @@ This is the failure mode most likely to look like "the wiki just stopped updatin
 
 The templates also clone the skills into the workspace and scope the commit to `openwiki/`
 plus the root instruction files, so the skills clone is never committed.
+
+### A failed run still opens the pull request
+
+Upstream 0.5.0 changed what CI does with a run that dies partway, and all three templates
+follow it. Previously a failure produced no PR at all, so an update that died on page nine
+of twelve discarded eight good pages and the next scheduled run began again from the same
+place — usually failing at the same page. Now the update step tolerates its own failure,
+the PR is opened either way with the outcome stated in the body, and the job is failed at
+the very end. The published progress is meant to be merged: *"When the result is `failure`,
+this PR intentionally preserves only the pages completed before the failure. Merge it to
+make that progress the baseline for the next scheduled run."*
+
+The templates also delete `openwiki/.run.json` before committing. This port never writes
+one, but a native `openwiki` run in the same repository would, and it is transient state
+that must never be committed.
+
+Two caveats specific to this port:
+
+- **The job's exit status is not the partial-run signal.** `claude -p` exits zero when the
+  skill merely *skips* a page, which is the ordinary contained-failure path. The signal is
+  inside the wiki: `openwiki/.last-update.json` carries `status: "interrupted"` with its
+  `gitHead` rewound to the last fully documented commit. Read that file, not the CI badge,
+  to tell a complete update from a partial one — and note that the rewound head is exactly
+  what stops the next run from treating the wiki as current.
+- **GitLab and Bitbucket have no `continue-on-error`.** Their templates capture the exit
+  code, push and open the MR/PR, then re-raise it, which produces the same outcome by hand.
 
 ## The permission allowlist
 

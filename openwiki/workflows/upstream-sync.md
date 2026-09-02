@@ -14,7 +14,7 @@ sources:
     resource: repo://skills/openwiki/references/index-labels.md
   - id: openwiki-source-88378f6a3ac54313171799db
     resource: repo://skills/openwiki/references/prompt-page.md
-generated: {by: "claude-code", at: "2026-08-26T00:12:15.000Z"}
+generated: { by: "claude-code", at: "2026-09-02T00:49:42.000Z" }
 ---
 
 # Upstream sync
@@ -126,6 +126,30 @@ them, the note should be replaced with the verbatim text.
 That is the shape to copy: reproduce upstream's decision, state the consequence, keep the
 minimum needed to stop the artifact from degrading, and leave a note that says what to do
 when upstream changes its mind.
+
+## An omission compounds, so record what depends on it
+
+A sync decision is rarely independent of the ones before it. Upstream 0.5.0 produced two
+that look separate and are not: the port does not write `openwiki/.page-manifest.json`, and
+0.5.0's sparse Claim reconciliation is largely inert here. Both reduce to a single earlier
+omission — the `.claims` sidecar. A manifest entry is only valid when a sidecar backs it,
+and sparse reconciliation is keyed on Claim ids that only a sidecar persists.
+
+This matters for the *next* sync rather than this one. Faced with either decision in
+isolation, a later reader would re-derive it from scratch and might reach a different
+answer for one than the other, leaving the port internally inconsistent. So `UPSTREAM.md`
+records them together, naming the shared root and the single condition that would reopen
+both: if upstream ever admits a sidecar-free manifest entry, the manifest write and the
+id-keyed reconciliation halves come back to life *together*.
+
+The general rule: when an omission causes a second one, write down the dependency, not just
+the two conclusions. A list of independent-looking decisions is exactly how a port drifts
+into contradicting itself.
+
+Note also what the manifest decision is *not*. Declining to write a file is not declining
+to read it — the port reads each entry's committed baseline, which needs no sidecar, and
+uses it to plan pages against their own update windows. [The port
+contract](../architecture/port-contract.md) states that rule in general form.
 
 ## The OKF caveat
 
