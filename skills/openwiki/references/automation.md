@@ -157,7 +157,141 @@ jobs:
 
 **Why the workflow publishes a failed run's output** (ported from upstream 0.5.0, #720). Until 0.4.3 a failed run produced no PR, so an update that died on page nine of twelve threw away eight good pages and the next scheduled run started over from the same place — usually failing at the same page. Now the PR is opened either way, the body says which it was, and merging it makes the finished pages the next run's baseline. `continue-on-error` plus a final `exit 1` keeps the job's status honest: the PR exists *and* the run is still red.
 
-Two caveats specific to this port. First, `claude -p` exits non-zero only on a hard failure (crash, rate limit, timeout) — a page this skill *skips* per SKILL.md Step 4 is a normal exit, so `steps.openwiki.outcome` will say `success`. The signal for that case is inside the wiki: SKILL.md Step 6 writes `status: "interrupted"` with a rewound `gitHead` in `openwiki/.last-update.json`, and the next run reads it and does not skip. Check that file, not the job status, to tell a complete update from a partial one. Second, upstream's per-page baseline lives in `openwiki/.page-manifest.json`, which this port reads but never writes (SKILL.md Step 1) — the `add-paths: openwiki` above still commits one if a native run created it, which is what you want.
+Two caveats. The first is not really specific to this port: `claude -p` exits non-zero only on a hard failure (crash, rate limit, timeout) — a page this skill *skips* per SKILL.md Step 4 is a normal exit, so `steps.openwiki.outcome` will say `success`. Upstream's CLI does the same, exiting 0 for any run that finalized, skipped pages included. The signal for that case is inside the wiki: SKILL.md Step 6 writes `status: "interrupted"` with a rewound `gitHead` in `openwiki/.last-update.json`, and the next run reads it and does not skip. Check that file, not the job status, to tell a complete update from a partial one. Second, upstream's per-page baseline lives in `openwiki/.page-manifest.json`, which this port reads but never writes (SKILL.md Step 1) — the `add-paths: openwiki` above still commits one if a native run created it, which is what you want.
+
+### GitHub Actions with auto-merge
+
+Upstream 0.5.1 (#842) added a second GitHub recipe that lands the docs PR without a human in the loop. Auto-merge is repository infrastructure rather than an OpenWiki feature: the workflow only *requests* it, and the branch's required checks and reviews still decide when GitHub merges.
+
+Set the repository up first — the workflow is inert otherwise:
+
+1. Enable **Allow auto-merge** in the repository's pull request settings.
+2. Add branch protection or a ruleset for the default branch. Require the checks that should gate generated docs, and decide whether OpenWiki PRs still need a human review.
+3. Create a fine-grained personal access token or GitHub App token scoped to this repository alone, with **Contents: read and write** and **Pull requests: read and write**, and save it as the `OPENWIKI_PR_TOKEN` secret. The dedicated token is not a nicety: pull requests created with the default `GITHUB_TOKEN` do not start most `pull_request` workflows, so the very checks meant to gate the merge may never run. Organization policy may require an App token rather than a PAT.
+
+Then save as `.github/workflows/openwiki-update.yml`. It is §3's recipe plus a `concurrency` group, a completeness check, a dedicated PR token on an id'd PR step, and the two auto-merge steps after it:
+
+```yaml
+name: OpenWiki Update and Auto-merge
+
+on:
+  workflow_dispatch:
+  schedule:
+    # GitHub schedules use UTC; 08:00 UTC is midnight PST.
+    - cron: "0 8 * * *"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+# One update at a time: a slow run and the next schedule must not both push
+# the openwiki/update branch, and must not race to arm auto-merge on it.
+concurrency:
+  group: openwiki-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    # Same fork guard as §3, and it matters more here: a fork must not silently
+    # arm a daily job that auto-merges into its default branch.
+    if: github.event_name == 'workflow_dispatch' || github.repository == 'OWNER/REPO' || vars.OPENWIKI_ENABLE_SCHEDULED_UPDATE == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+
+      - name: Install Claude Code and the openwiki skills
+        run: |
+          npm install --global @anthropic-ai/claude-code
+          git clone --depth 1 https://github.com/JHSeo-git/openwiki-skill /tmp/openwiki-skill
+          mkdir -p .claude/skills
+          cp -R /tmp/openwiki-skill/skills/openwiki .claude/skills/openwiki
+          cp -R /tmp/openwiki-skill/skills/mermaid-diagrams .claude/skills/mermaid-diagrams
+
+      - name: Run openwiki update
+        id: openwiki
+        continue-on-error: true
+        run: claude --dangerously-skip-permissions -p "Use the openwiki skill to update this repository's wiki. If it reports the wiki is already current, change nothing."
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Subscription alternative (instead of ANTHROPIC_API_KEY):
+          # CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+      - name: Remove transient OpenWiki run state
+        if: ${{ !cancelled() }}
+        run: rm -f -- openwiki/.run.json
+
+      - name: Check whether the update completed
+        id: completeness
+        if: ${{ !cancelled() }}
+        # `claude -p` exits 0 even when the skill skips a page (SKILL.md Step 4),
+        # so the job's outcome cannot gate an unattended merge on its own. The
+        # real signal is the metadata SKILL.md Step 6 writes. Anything this step
+        # cannot read counts as not-complete: never auto-merge what you cannot
+        # prove. (jq is preinstalled on GitHub-hosted runners.)
+        run: |
+          wiki_status=missing
+          if [ -f openwiki/.last-update.json ]; then
+            wiki_status=$(jq -r 'if .status == "interrupted" then "interrupted" else "complete" end' openwiki/.last-update.json 2>/dev/null || echo unreadable)
+          fi
+          echo "status=${wiki_status}" >> "$GITHUB_OUTPUT"
+
+      - name: Create OpenWiki update pull request
+        id: create-pr
+        if: ${{ !cancelled() }}
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ secrets.OPENWIKI_PR_TOKEN }}
+          add-paths: |
+            openwiki
+            AGENTS.md
+            CLAUDE.md
+          branch: openwiki/update
+          commit-message: "docs: update OpenWiki"
+          title: "docs: update OpenWiki"
+          body: |
+            Automated OpenWiki documentation update.
+
+            OpenWiki result: ${{ steps.openwiki.outcome }} (wiki status: ${{ steps.completeness.outputs.status }})
+
+            A `failure` result, or any wiki status other than `complete`, means this
+            PR preserves only the pages the run finished, and auto-merge was left
+            off. A later successful run can update it.
+
+      - name: Enable auto-merge after a complete update
+        if: ${{ steps.openwiki.outcome == 'success' && steps.completeness.outputs.status == 'complete' && steps.create-pr.outputs.pull-request-number != '' }}
+        run: |
+          [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]
+          gh pr merge --auto --squash "$PR_NUMBER"
+        env:
+          GH_TOKEN: ${{ secrets.OPENWIKI_PR_TOKEN }}
+          PR_NUMBER: ${{ steps.create-pr.outputs.pull-request-number }}
+
+      - name: Disable auto-merge after a failed or partial update
+        if: ${{ !cancelled() && (steps.openwiki.outcome == 'failure' || steps.completeness.outputs.status != 'complete') && steps.create-pr.outputs.pull-request-number != '' }}
+        run: |
+          [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]
+          gh pr merge --disable-auto "$PR_NUMBER"
+        env:
+          GH_TOKEN: ${{ secrets.OPENWIKI_PR_TOKEN }}
+          PR_NUMBER: ${{ steps.create-pr.outputs.pull-request-number }}
+
+      - name: Propagate OpenWiki failure
+        if: ${{ steps.openwiki.outcome == 'failure' }}
+        run: exit 1
+```
+
+**[adapted]** The completeness gate is this port's, and it is the one step not to drop — it closes a hole upstream's own recipe still has. Upstream arms auto-merge on `steps.openwiki.outcome == 'success'`, which catches a hard failure, since that exits 1. It does not catch a **finalized partial** run: a skipped page (#732) or mid-run source drift (#740) still finishes the run, so `openwiki code --update` exits 0 while writing `status: "interrupted"` into its own metadata — upstream's CLI maps a successful run straight to exit 0 and never reads that status back (`src/cli/app/app.tsx`). `claude -p` behaves the same way for the same reason, which is §3's caveat. Unattended, that is the difference between "the docs PR merged itself" and "the docs PR merged itself while a rewound `gitHead` quietly became the baseline". So both arms here read the signal both runners *do* write, `openwiki/.last-update.json`'s `status`: auto-merge is armed only for a run that finished what it planned, anything the step cannot read counts as not-complete, and the disable arm is widened to clear an auto-merge left pending on a reused branch. Keep the gate even if you swap `claude -p` for the native CLI.
+
+Two smaller differences from upstream's file. It has an `Exclude workflow changes` step (`git checkout -- .github/workflows/openwiki-update.yml`) because upstream's own recipe commits that workflow; this port never writes CI files (SKILL.md Step 0's `[omitted]`) and `add-paths` already excludes it, so nothing needs excluding — keep it that way, since auto-merging an executable workflow file is exactly the change no unattended job should make. And the PR action is pinned a major ahead of §3's (`v8.1.1` vs `v7`), mirroring upstream's two files; both expose `outputs.pull-request-number`, so pin whichever you already trust and keep it pinned by SHA.
 
 ### GitLab CI
 
