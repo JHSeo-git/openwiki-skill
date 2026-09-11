@@ -1,5 +1,7 @@
 # Changelog
 
+## Unreleased
+
 ## 0.5.1 (2026-09-11)
 
 - Upstream sync: bump pin `64903f9` → `3bc038d` (upstream v0.5.1). A patch release, and only two of its twenty-two commits touch mapped paths. Every prompt source and every lifecycle module this port maps is byte-identical to 0.5.0 — checked file by file rather than inferred from the commit list. Out of scope: the broad dependency modernization (#810/#783/#808/#784), `.env` value unescaping (#794), both visualizer fixes (#796/#806), the debug diagnostics stack panel (#832), openai-compatible stream chunks and top-level model-request rendering (#817/#846 — provider and stream plumbing this port has no runtime for), MCP connector env resolution (#838), the release-workflow fix (#851), upstream's own wiki updates (#798/#805/#814/#816/#825/#843), and the version-packages chore (#852).
