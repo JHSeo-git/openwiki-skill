@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.2 (2026-09-15)
 
 - Upstream sync: bump pin `3bc038d` → `fd8794b` (upstream v0.5.2). Twenty-one commits, six of which touch behavior this port mirrors — including the first prompt-source change since 0.5.0 and the arrival of the Claude-Code-specific fix flagged in the 0.5.1 notes. Out of scope: provider and transport plumbing (#856 Vertex Grok routing, #861/#862 OpenAI-compatible stream normalization and roleless worker messages, #864 OpenRouter 404 retries, #788/#801 reasoning-effort mapping, #847 managed env keys, #869 model-list entries), the `bob` provider runtime (#780 — only its host-registry actor is in scope here), credential-diagnostics redaction (#885), the current-Node requirement (#863), the Windows ctime fingerprint fix (#859 — this port has no fingerprint), upstream's own wiki updates (#854/#873/#880), and the version-packages chore (#860).
 
