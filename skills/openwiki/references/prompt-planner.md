@@ -1,6 +1,6 @@
 # Planning phase — planner prompt, submission schema, and plan validation
 
-> Reproduced from upstream `src/agent/repository-prompts.ts` `createRepositoryPlannerPrompt` (v0.5.1, unchanged since 0.5.0), with its interpolated context blocks rendered in place as SKILL.md Step 3 describes. The submission schema is upstream `src/agent/repository-runner.ts` `PlanSchema`; the validation rules are upstream `src/generation/page-jobs.ts` `createRepositoryPlan`. **[adapted]** upstream's `/`-rooted virtual paths (`/openwiki/quickstart.md`) are the wiki's canonical page identifiers throughout the lifecycle — keep writing them that way in the plan, and read `/openwiki/x.md` as the real repo-relative file `openwiki/x.md` when you touch the filesystem.
+> Reproduced from upstream `src/agent/repository-prompts.ts` `createRepositoryPlannerPrompt` (v0.5.2), with its interpolated context blocks rendered in place as SKILL.md Step 3 describes. The submission schema is upstream `src/agent/repository-runner.ts` `PlanSchema`; the validation rules are upstream `src/generation/page-jobs.ts` `createRepositoryPlan`. **[adapted]** upstream's `/`-rooted virtual paths (`/openwiki/quickstart.md`) are the wiki's canonical page identifiers throughout the lifecycle — keep writing them that way in the plan, and read `/openwiki/x.md` as the real repo-relative file `openwiki/x.md` when you touch the filesystem.
 >
 > Since 0.4.0 (#713) repository generation is a two-role lifecycle: **one bounded planner** decides the complete page set, then **one fresh worker per page** writes it (`references/prompt-page.md`). Upstream gives the planner read-only filesystem tools (`read_file`, `ls`, `glob`, `grep`), no shell, no write access to any wiki page, and strips the delegation tool — **[adapted]** hold yourself to the same boundary while planning: research read-only, write nothing, and do not hand the planning out to a subagent.
 
@@ -8,7 +8,7 @@
 
 You are planning an OpenWiki code wiki for this repository.
 
-Your only output action is submit_plan. Do not write documentation and do not delegate work.
+Your only output action is submit_plan. Do not write documentation, do not delegate work, and do not emit narrative or conversational text. Invoke submit_plan directly.
 
 Design the smallest complete repository-specific information architecture that helps a coding agent understand and safely change the system. Organize around owned systems, runtime domains, and cross-system workflows rather than mirroring the source tree. Use hierarchical paths for meaningful groups such as /openwiki/architecture/, /openwiki/concepts/, /openwiki/workflows/, /openwiki/operations/, /openwiki/integrations/, and /openwiki/testing/ when the repository has enough coverage to warrant them. Do not emit a flat dump of unrelated top-level pages. Include /openwiki/quickstart.md for init.
 
@@ -56,7 +56,7 @@ Upstream exposes exactly one completion tool to the planner:
 
 > **submit_plan** — Submit the final canonical OpenWiki page plan. This is the only completion action for planning.
 
-**[adapted]** You have no such tool. Produce the same payload as your own plan record and validate it against the rules below before starting the page loop; you may keep it in your working notes, but do **not** write it into the wiki — `_plan.md` and `_skeleton.md` no longer exist (upstream 0.4.0 replaced both with the code-owned `openwiki/.run.json` checkpoint, and any `_`-prefixed page path is rejected outright).
+**[adapted]** You have no such tool. Produce the same payload as your own plan record and validate it against the rules below before starting the page loop; you may keep it in your working notes, but do **not** write it into the wiki — `_plan.md` and `_skeleton.md` no longer exist (upstream 0.4.0 replaced both with the code-owned `openwiki/.run.json` checkpoint, and any `_`-prefixed page path is rejected outright). 0.5.2 (#872) added "do not emit narrative or conversational text. Invoke submit_plan directly" to the prompt above because planners were answering in prose instead of calling the tool; having no tool does not exempt you from the rule it encodes — go from research straight to the payload, without a conversational preamble about what you are about to plan.
 
 Since 0.5.0 (#789) submitting again is **not** an error, but replacing the plan is: upstream dropped the "already called" guard and now re-validates the second payload and compares it against the persisted plan ignoring job ids, accepting an identical semantic plan and rejecting a different one (`This OpenWiki run already has a different persisted plan.`). The rule that matters for you: **the page set is fixed once you start writing pages.** Restating the plan you already fixed is harmless; quietly revising it mid-queue is not — the pages already written were planned against the old set, and page paths are final once submitted.
 
