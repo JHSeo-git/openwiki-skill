@@ -12,7 +12,7 @@ sources:
     resource: repo://skills/openwiki/SKILL.md
   - id: openwiki-source-88378f6a3ac54313171799db
     resource: repo://skills/openwiki/references/prompt-page.md
-generated: { by: "claude-code", at: "2026-09-02T00:49:42.000Z" }
+generated: { by: "claude-code", at: "2026-09-15T01:48:47.000Z" }
 ---
 
 # OKF output contract
@@ -81,9 +81,12 @@ never advances the stamp. This is why the provenance pass runs **last**, after e
 finalize pass: the index, link, and `sources` passes all edit front matter, and none of
 those edits should look like a content change.
 
-The actor is the producing host — `claude-code`, `codex`, `opencode`, `cursor` — where
-upstream stamps its own version. See [the port
-contract](../architecture/port-contract.md) for why.
+The actor is the producing host — `claude-code`, `codex`, `opencode`, `cursor`, and since
+upstream 0.5.2 also `bob` and `kiro` — where upstream stamps its own version. The set is
+upstream's host registry rather than a list this port curates, so it grows with each
+coding-agent integration upstream adds; a wiki may carry an actor this port would never
+write itself. See [the port contract](../architecture/port-contract.md) for why the port
+stamps a host at all.
 
 **The actor is per page, not per wiki.** Upstream 0.5.0 lets a durable run be resumed by a
 different host, so it records which producer completed each page and hands the provenance

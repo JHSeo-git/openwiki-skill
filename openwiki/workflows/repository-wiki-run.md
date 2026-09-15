@@ -10,7 +10,7 @@ sources:
     resource: repo://skills/openwiki/references/prompt-page.md
   - id: openwiki-source-12cc308cf6471b687af07d19
     resource: repo://skills/openwiki/references/prompt-planner.md
-generated: { by: "claude-code", at: "2026-09-02T00:49:42.000Z" }
+generated: { by: "claude-code", at: "2026-09-15T01:48:47.000Z" }
 ---
 
 # Repository wiki run
@@ -69,18 +69,35 @@ The repository lifecycle, including both early exits.
 
 Root `AGENTS.md` and `CLAUDE.md` each carry a managed block between
 `<!-- OPENWIKI:START -->` and `<!-- OPENWIKI:END -->`. Since upstream 0.3.3 they get
-**different** snippets: AGENTS.md the full block, CLAUDE.md a one-line pointer to it, so a
-single file stays the canonical source of agent instructions while Claude Code still has a
-file it reads at startup.
+**different** snippets: AGENTS.md the full block, CLAUDE.md a one-line reference to it, so
+a single file stays the canonical source of agent instructions while Claude Code still has
+a file it reads at startup.
+
+Since upstream 0.5.2 that reference is an `@AGENTS.md` **import** rather than a Markdown
+link, and the fix is worth understanding because it was a bug about this exact host: Claude
+Code expands only its own `@path` syntax, and it reads AGENTS.md unprompted only when no
+CLAUDE.md sits beside it — which, once the setup has run, is never. So the block upstream
+shipped for two minor releases, whose body was an ordinary Markdown link pointing at
+AGENTS.md, was inert. The instructions reached Codex through AGENTS.md and never reached
+the host CLAUDE.md exists for.
 
 Marker validation is strict and **all-or-nothing across both files**: a file with markers
 must have exactly one `START` followed by exactly one `END`, and malformed or duplicated
 markers fail the setup with neither file written. A malformed sibling therefore leaves both
 untouched — the property that keeps a half-applied setup from happening.
 
-Two port-specific behaviors: a legacy unmarked `## OpenWiki` section is replaced rather
-than duplicated, and a `CLAUDE.md` that imports AGENTS.md counts as covered, since the
-import already does the pointer's job.
+A `CLAUDE.md` whose entire content is just `@AGENTS.md` is left **completely** alone —
+no markers, no block, not even a rewritten trailing newline. That began as a port-specific
+behavior and upstream adopted it in 0.5.1, with a narrower condition: the whole file must
+be exactly that line, so an import mixed with other content now receives the managed block
+like any other file. Since 0.5.2 the skip is self-evidently cheap, because the block's own
+content is that same import.
+
+Two further cases. A repository that makes `CLAUDE.md` and `AGENTS.md` **the same file**
+(a symlink or hard link, so one file serves both hosts) gets the full AGENTS.md block
+there instead of the reference, since an import would otherwise point the file at itself.
+And one genuinely port-specific behavior remains: a legacy unmarked `## OpenWiki` section
+is replaced rather than duplicated, a state upstream never produces.
 
 Only Step 0 may touch these files. The documentation work never does.
 
@@ -107,6 +124,16 @@ cohort. With no manifest present the port has exactly one provable baseline, the
 `gitHead`, so the whole wiki forms a single window; that is what this port did before
 0.5.0. A cohort whose changed-path set is empty needs no source-driven work, which is how
 upstream's separate baseline fast-forward falls out of the window itself here.
+
+How much an entry's commit can be trusted improved in upstream 0.5.2, and for a consumer
+that plans from it the change is not cosmetic. Until then the finish rewrite stamped
+*every* surviving page with the finishing run's commit, including pages that run never
+regenerated — so a page nobody re-reviewed could claim to be verified as of the newest
+commit, and a window computed from it would skip real changes. Upstream now restamps only
+the pages a run actually regenerated; others keep their prior commit, a skipped page keeps
+its exact entry, and an untouched page it cannot cover is left for full review. Reading an
+older native run's manifest therefore means inheriting a more optimistic ledger, and an
+entry in doubt belongs in the full-review cohort.
 
 Why the write is withheld, and why that is safe, is [Claims and
 grounding](../concepts/claims-and-grounding.md)'s subject: an entry is only valid when a
@@ -166,6 +193,12 @@ Its design instruction is worth quoting for what it rules out: organize around *
 systems, runtime domains, and cross-system workflows rather than mirroring the source
 tree**, and do not emit a flat dump of unrelated top-level pages. Hierarchical groups are
 expected where the repository warrants them.
+
+Since upstream 0.5.2 the prompt also forbids **narrative or conversational output** before
+submitting, after planners were found answering in prose instead of submitting a plan. The
+rule survives the adaptation that this port has no submission tool: producing the plan as
+a record rather than a tool call does not license a preamble about what is about to be
+planned.
 
 The plan is then hard-validated. Init must include quickstart and may delete nothing;
 quickstart is never deletable; no duplicates; no page both generated and deleted; reserved

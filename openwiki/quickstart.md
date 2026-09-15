@@ -16,13 +16,13 @@ sources:
     resource: repo://skills/openwiki-personal/SKILL.md
   - id: openwiki-source-f27335ea429d443b8de638e2
     resource: repo://skills/openwiki/SKILL.md
-generated: { by: "claude-code", at: "2026-09-02T00:49:42.000Z" }
+generated: { by: "claude-code", at: "2026-09-15T01:48:47.000Z" }
 ---
 
 # openwiki-skill quickstart
 
 Agent skills that write, maintain, and answer from OpenWiki wikis — a port of
-[langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) **v0.5.0** for coding
+[langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) **v0.5.2** for coding
 agents such as Claude Code and Codex.
 
 Upstream is a CLI that drives a model through provider APIs. This repository drops that
@@ -46,7 +46,7 @@ criterion.
 | Port a new upstream release | [Upstream sync](workflows/upstream-sync.md) | `UPSTREAM.md`, `CHANGELOG.md` |
 | Change front matter, indexes, diagrams, or link validation | [OKF output contract](concepts/okf-output.md) | both `SKILL.md` finalize steps, `skills/mermaid-diagrams/SKILL.md` |
 | Work on evidence, Claims, or staleness detection | [Claims and grounding](concepts/claims-and-grounding.md) | `skills/openwiki/references/prompt-page.md`, `skills/openwiki/SKILL.md` Steps 1 and 5 |
-| Schedule updates, set up CI, or scope permissions | [Automation](operations/automation.md) | `skills/openwiki/references/automation.md` |
+| Schedule updates, set up CI (including auto-merging docs PRs), or scope permissions | [Automation](operations/automation.md) | `skills/openwiki/references/automation.md` |
 | Change wording users see before installing | — | `README.md` |
 
 ## The two lifecycles at a glance
@@ -71,7 +71,9 @@ Two properties of the repository lifecycle are easy to miss and shape how update
   rather than aborting the run, and the metadata then records `status: "interrupted"` with
   the last fully documented commit — so the finished pages are committable and the next run
   knows to come back. Since upstream 0.5.0 the CI templates publish that partial output
-  deliberately, expecting it to be merged as the next run's starting point.
+  deliberately, expecting it to be merged as the next run's starting point. This is also
+  why an auto-merging template must gate on that recorded status rather than on the job's
+  exit code, which is zero for a partial run — see [Automation](operations/automation.md).
 - **Two files under `openwiki/` are read-only.** `openwiki/.run.json` and
   `openwiki/.page-manifest.json` belong to the native CLI. The port reads the manifest's
   committed per-page baselines to avoid regenerating work a native or CI run already did,
@@ -79,16 +81,20 @@ Two properties of the repository lifecycle are easy to miss and shape how update
 
 ## Invariants
 
-Four rules govern every change here. Each is expanded in
+Five rules govern every change here. Each is expanded in
 [the port contract](architecture/port-contract.md).
 
 1. **Unmarked text is upstream's — never paraphrase it.** Paraphrase breaks the next sync's
    diff.
 2. **A behavior change needs a marker.** New behavior upstream lacks, or dropped behavior it
    has, without an `[adapted]` or `[omitted]` note is indistinguishable from drift.
-3. **Deterministic passes stay deterministic.** Write only when content differs. That is what
+3. **An `[adapted]` note expires.** Upstream sometimes adopts this port's deviation — it
+   happened in 0.5.1 and again in 0.5.2 — and the note then asserts a divergence that no
+   longer exists, which makes it wrong rather than merely stale. Re-check adaptations in
+   whatever areas a release touched.
+4. **Deterministic passes stay deterministic.** Write only when content differs. That is what
    keeps a no-op a no-op and lets either tool continue the other's wiki.
-4. **Version stamps move together.** The pin, the skill intros, and the reference-file
+5. **Version stamps move together.** The pin, the skill intros, and the reference-file
    provenance headers name one upstream version.
 
 Two mechanical traps worth knowing before you edit a skill:

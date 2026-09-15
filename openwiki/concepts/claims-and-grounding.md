@@ -10,7 +10,7 @@ sources:
     resource: repo://skills/openwiki/SKILL.md
   - id: openwiki-source-88378f6a3ac54313171799db
     resource: repo://skills/openwiki/references/prompt-page.md
-generated: { by: "claude-code", at: "2026-09-02T00:49:42.000Z" }
+generated: { by: "claude-code", at: "2026-09-15T01:48:47.000Z" }
 ---
 
 # Claims and grounding
@@ -205,10 +205,21 @@ of sidecars:
 - A cited file that no longer exists, or is no longer a regular file → **unresolved**.
 - A cited file that changed → **stale**, where "changed" is the union of the working-tree
   diff, untracked files, and the committed range since the last recorded head.
-- A cited file that has become unreadable — newly excluded by `.openwikiignore`, or
-  reached through a symlink — is a **hard failure upstream**. The port instead reports it
-  as unresolved and names the page and resource, so the user can repair the rule or the
-  page rather than have the run abort or the grounding vanish silently.
+- A cited file reached **through a symlink** out of the repository → **unresolved**, and
+  since upstream 0.5.2 that is upstream's classification too. Upstream used to abort the
+  whole update on it and now reports it for reconciliation, on the reasoning that a
+  containment refusal is *permanent* for the cited resource rather than an operational
+  failure — a resource the resolver will always refuse is exactly a resource whose
+  grounding needs a decision, not a resource whose run needs to die. This had been a
+  port-original adaptation before upstream agreed; [the port
+  contract](../architecture/port-contract.md) explains why that pattern matters.
+- A cited file **newly excluded by `.openwikiignore`** is still a **hard failure
+  upstream**, because 0.5.2 downgraded only the containment class and an excluded path
+  raises a different error. The port still reports it as unresolved instead, names the
+  page and resource, and lets the run finish, so the user can repair the rule or the page
+  rather than have the run abort or the grounding vanish silently. That half remains an
+  adaptation, and the boundary between the two halves is worth keeping straight: one is
+  now shared with upstream, the other is still this port's own call.
 
 The fidelity gap is stated plainly in the skill and worth repeating: this is **per page
 and per file**, where upstream is **per Claim and content-versioned**. It cannot

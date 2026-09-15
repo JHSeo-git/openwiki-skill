@@ -24,7 +24,7 @@ sources:
     resource: repo://skills/openwiki/references/prompt-page.md
   - id: openwiki-source-12cc308cf6471b687af07d19
     resource: repo://skills/openwiki/references/prompt-planner.md
-generated: { by: "claude-code", at: "2026-09-02T00:49:42.000Z" }
+generated: { by: "claude-code", at: "2026-09-15T01:48:47.000Z" }
 ---
 
 # Skill catalog and boundaries
@@ -130,7 +130,9 @@ workflow](../workflows/upstream-sync.md).
 - `UPSTREAM.md` — the sync contract: pinned commit, path mapping, scope lists, procedure.
 - `AGENTS.md` — this repository's own agent instructions, which are themselves the marker
   block the `openwiki` skill's Step 0 manages. `CLAUDE.md` is a one-line import of it, so
-  Step 0's import exception applies to this repository too.
+  Step 0's import exception applies to this repository too — and since upstream 0.5.2 the
+  managed block it would otherwise receive *is* that same import, which is why skipping
+  the file costs nothing.
 - `CHANGELOG.md` — one entry per release, house style being a small number of dense
   bullets that name the upstream PR numbers ported and the ones deliberately skipped.
 - `docs/superpowers/` — the original design specs and implementation plans from the

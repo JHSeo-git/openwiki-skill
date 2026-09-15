@@ -14,7 +14,7 @@ sources:
     resource: repo://skills/openwiki/references/automation.md
   - id: openwiki-source-11012093e98a6994fe87df7b
     resource: repo://skills/openwiki/references/runtime-evidence.md
-generated: { by: "claude-code", at: "2026-09-02T00:49:42.000Z" }
+generated: { by: "claude-code", at: "2026-09-15T01:48:47.000Z" }
 ---
 
 # Keeping wikis fresh automatically
@@ -53,8 +53,9 @@ that state; the instruction stops a scheduled run from inventing work to justify
 ## Route 2 — CI, which needs a credential
 
 CI runners have no subscription login, so this route requires `ANTHROPIC_API_KEY` or a
-`claude setup-token` token as a CI secret. Templates exist for GitHub Actions (PR flow),
-GitLab CI (MR flow), and Bitbucket Pipelines (PR flow).
+`claude setup-token` token as a CI secret. Templates exist for GitHub Actions (PR flow,
+and since upstream 0.5.1 a second variant that auto-merges), GitLab CI (MR flow), and
+Bitbucket Pipelines (PR flow).
 
 One setting is load-bearing across all three: **they clone full history**
 (`fetch-depth: 0`, `GIT_DEPTH: "0"`, `clone: depth: full`). A shallow clone hides the
@@ -79,16 +80,46 @@ The templates also delete `openwiki/.run.json` before committing. This port neve
 one, but a native `openwiki` run in the same repository would, and it is transient state
 that must never be committed.
 
-Two caveats specific to this port:
+Two caveats, the first of which is not actually specific to this port:
 
 - **The job's exit status is not the partial-run signal.** `claude -p` exits zero when the
   skill merely *skips* a page, which is the ordinary contained-failure path. The signal is
   inside the wiki: `openwiki/.last-update.json` carries `status: "interrupted"` with its
   `gitHead` rewound to the last fully documented commit. Read that file, not the CI badge,
   to tell a complete update from a partial one — and note that the rewound head is exactly
-  what stops the next run from treating the wiki as current.
+  what stops the next run from treating the wiki as current. Upstream's CLI behaves the
+  same way: it maps any run that finalized to a zero exit and never reads that status
+  back, so a skipped page or mid-run source drift leaves a green job there too.
 - **GitLab and Bitbucket have no `continue-on-error`.** Their templates capture the exit
   code, push and open the MR/PR, then re-raise it, which produces the same outcome by hand.
+
+### Auto-merging the docs PR
+
+Upstream 0.5.1 added a second GitHub Actions template that asks GitHub to merge the docs
+PR without a human in the loop. Auto-merge is repository infrastructure rather than an
+OpenWiki feature: the workflow only *requests* it, and the branch's required checks and
+reviews still decide when the merge happens. Three prerequisites carry real weight —
+enabling auto-merge on the repository, protecting the default branch with the checks that
+should gate generated docs, and providing a **dedicated** `OPENWIKI_PR_TOKEN`. The last is
+not a preference: a pull request opened with the default `GITHUB_TOKEN` does not start
+most `pull_request` workflows, so the very checks meant to gate the merge may never run.
+
+The gate on arming auto-merge is where this port deviates, and the caveat above is the
+reason. Upstream arms it on the run's outcome, which catches a hard failure but not a
+*finalized partial* run — and since both runners exit zero on one, an outcome-only gate
+would let a partial wiki merge itself, with its rewound `gitHead` quietly becoming the
+next run's baseline and nobody reading the PR to notice. So the template here reads
+`openwiki/.last-update.json` and arms auto-merge only for a run that finished what it
+planned; anything it cannot read counts as incomplete, because the safe direction is to
+never auto-merge what you cannot prove. A mirrored disable step clears an auto-merge left
+pending on a reused branch. That makes the gate a fix rather than a workaround: upstream's
+own recipe has the same hole for the same reason.
+
+One step from upstream's template is deliberately absent: it restores
+`.github/workflows/openwiki-update.yml` before committing, because upstream's own recipe
+commits that workflow. This port never writes CI files and its commit scope already
+excludes them — which is the property you want, since auto-merging an executable workflow
+file is exactly what an unattended job must not do.
 
 ## The permission allowlist
 

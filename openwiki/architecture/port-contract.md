@@ -14,7 +14,7 @@ sources:
     resource: repo://skills/openwiki/SKILL.md
   - id: openwiki-source-88378f6a3ac54313171799db
     resource: repo://skills/openwiki/references/prompt-page.md
-generated: { by: "claude-code", at: "2026-09-02T00:49:42.000Z" }
+generated: { by: "claude-code", at: "2026-09-15T01:48:47.000Z" }
 ---
 
 # The port contract
@@ -50,6 +50,16 @@ An `[adapted]` note that only says *what to do here* is incomplete. It must also
 what upstream does, because the next sync compares against upstream's behavior, not
 against this port's. The same applies to `[omitted]`: a bare omission is
 indistinguishable from an oversight, so each one carries its reason.
+
+**The adapted layer is not permanent, and that has bitten twice in a row.** Where this
+port deviates for a stated reason, upstream sometimes arrives at the same conclusion
+later: 0.5.1 adopted the rule that a `CLAUDE.md` consisting only of an AGENTS.md import
+needs no managed block, and 0.5.2 adopted the rule that evidence resolving through a
+symlink is unresolved rather than fatal. Both had been port-original `[adapted]` calls.
+The consequence is sharper than "keep the notes fresh": once upstream agrees, the note is
+**wrong**, not merely stale, because it asserts a divergence that no longer exists — and
+a reader trusts it to decide whether a behavior is safe to change. So an adaptation is a
+claim about upstream that expires, and re-checking it is part of every sync.
 
 ## What upstream owns and what this port owns
 
@@ -93,11 +103,13 @@ see [the OKF output contract](../concepts/okf-output.md) for the artifact itself
 Two deliberate exceptions, both recorded where they occur:
 
 - **Producer identity.** Upstream stamps its own version as the producing actor; this
-  port stamps the host agent (`claude-code`, `codex`, `opencode`, `cursor`) instead,
-  because claiming upstream's identity for output upstream did not generate would
-  misattribute it. Since upstream 0.5.0 a single wiki may carry *different* producers on
-  different pages — a durable run can be resumed by another host — so the port must
-  never normalize another host's actor onto a page it did not itself change.
+  port stamps the host agent instead — `claude-code`, `codex`, `opencode`, `cursor`,
+  and, since upstream 0.5.2, `bob` and `kiro` — because claiming upstream's identity for
+  output upstream did not generate would misattribute it. The set is upstream's own host
+  registry, so it grows whenever upstream adds a coding-agent integration. Since
+  upstream 0.5.0 a single wiki may carry *different* producers on different pages — a
+  durable run can be resumed by another host — so the port must never normalize another
+  host's actor onto a page it did not itself change.
 - **Code-owned state with no reproducible format.** Where upstream persists state whose
   format only its own code can produce or interpret, the port omits it rather than
   inventing a look-alike. [Claims and grounding](../concepts/claims-and-grounding.md)
@@ -119,6 +131,14 @@ failed native or CI run worthwhile even when the follow-up runs here. Fabricatin
 would throw away work someone already paid for. Both halves are the same fidelity
 argument, applied in opposite directions.
 
+Reading state you do not write has its own cost, though, and upstream 0.5.2 paid it down:
+until then the ledger's finish rewrite stamped *every* surviving page with the run's
+commit, including pages that run never regenerated, so a recorded commit could overstate
+what had actually been verified. It now restamps only the pages a run regenerated. A
+consumer inherits its producer's honesty, which is why the port's read is only as sound
+as the writer that left the file — and why an entry it has reason to doubt belongs in
+full review rather than in a narrower baseline.
+
 ## Invariants for anyone changing this repository
 
 - **Never paraphrase unmarked text.** If it is unmarked it is upstream's, and a
@@ -133,6 +153,9 @@ argument, applied in opposite directions.
   directory, so a file two skills both need cannot be shared — it is copied, and the
   copies must not drift. [The upstream sync workflow](../workflows/upstream-sync.md)
   carries the guard for the one such file.
+- **Re-check every `[adapted]` note against the new release.** An adaptation upstream has
+  since adopted must be rewritten as upstream behavior; leaving it marked as a deviation
+  misstates the contract.
 - **No positional parameters in shell snippets.** A dollar sign followed by a digit
   inside a `SKILL.md` is substituted with the skill's invocation arguments before the
   agent reads the file, which silently corrupts the command. Use a named variable.

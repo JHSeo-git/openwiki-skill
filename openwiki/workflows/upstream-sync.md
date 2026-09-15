@@ -14,7 +14,7 @@ sources:
     resource: repo://skills/openwiki/references/index-labels.md
   - id: openwiki-source-88378f6a3ac54313171799db
     resource: repo://skills/openwiki/references/prompt-page.md
-generated: { by: "claude-code", at: "2026-09-02T00:49:42.000Z" }
+generated: { by: "claude-code", at: "2026-09-15T01:48:47.000Z" }
 ---
 
 # Upstream sync
@@ -65,7 +65,8 @@ The steps in words:
 2. **List relevant changes** with a path-scoped `git log` from the pin to the new tag.
 3. **No output → the skills are current; stop.** Output → review each commit's diff and
    port it per the mapping. Also list the tag's source tree and compare it against the
-   mapping.
+   mapping, and read the unscoped log as well — the scoped one is only as complete as its
+   path list.
 4. **Apply prompt changes as diffs**, keeping `[adapted]` and `[omitted]` markers intact.
 5. **Verify the deliberately duplicated files still match.**
 6. **Move the pin and write the changelog entry.**
@@ -98,6 +99,22 @@ upstream source, update both and confirm the diff is empty.
 **Check that a revert is complete.** A release can contain both a feature and its revert. If
 so, the net effect is nothing — but confirm that by diffing the reverting commit against the
 feature's parent rather than assuming it.
+
+**Every file the mapping depends on belongs in the scoped log's path list.** The mapping
+names `src/integrations/install/registry.ts` as the source of truth for the provenance-actor
+list, but the path was missing from the command the procedure tells you to run. So when
+upstream 0.5.2 added a coding-agent host there, the scoped log showed nothing and only the
+full log revealed it — a host missing from the actor list being exactly the omission that
+log exists to catch. A mapping row that cites a file is a claim that changes to it matter;
+the command has to agree.
+
+**Re-check every `[adapted]` note against the new release.** An adaptation is a claim about
+upstream, and upstream can adopt it: 0.5.1 took this port's rule for a `CLAUDE.md` that only
+imports AGENTS.md, and 0.5.2 took its rule for evidence resolving through a symlink. Once
+that happens the note is *wrong* rather than stale, because it asserts a divergence that no
+longer exists — and the two adoptions came in consecutive releases, so this is a routine
+outcome rather than a curiosity. Check adaptations in the areas a release touched, and
+where upstream's version is narrower than the port's, prefer upstream's.
 
 ## What a sync must leave consistent
 
