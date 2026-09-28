@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 (2026-09-28)
 
 - Upstream sync: bump pin `fd8794b` → `7557f9e` (upstream v0.6.0); reviewed all 17 commits, including the new `src/retrieval/` and `src/linking/` modules. Provider streaming (#932), visualizer URL decoding (#917), installer runtime, upstream wiki updates, and release chores remain out of scope.
 - Port repository retrieval and linked-workspace Q&A (#905): optional `openwiki_search`/`openwiki_read`, explicit ambiguous-workspace selection, exact section reads with wiki identity, and local Markdown fallback; update the managed AGENTS.md snippet to use retrieval only when needed. The MCP server, ranking engine, and workspace registry remain upstream-owned.
