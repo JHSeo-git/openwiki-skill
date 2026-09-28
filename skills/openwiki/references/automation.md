@@ -131,6 +131,7 @@ jobs:
         run: rm -f -- openwiki/.run.json
 
       - name: Create OpenWiki update pull request
+        id: create-pr
         if: ${{ !cancelled() }}
         uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7
         with:
@@ -149,6 +150,10 @@ jobs:
             When the result is `failure`, this PR intentionally preserves only the
             pages completed before the failure. Merge it to make that progress the
             baseline for the next scheduled run.
+
+      - name: Annotate OpenWiki update pull request
+        if: ${{ !cancelled() && steps.create-pr.outputs.pull-request-url != '' }}
+        run: echo "::notice title=OpenWiki update pull request::${{ steps.create-pr.outputs.pull-request-url }}"
 
       - name: Propagate OpenWiki failure
         if: ${{ steps.openwiki.outcome == 'failure' }}
@@ -283,6 +288,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.OPENWIKI_PR_TOKEN }}
           PR_NUMBER: ${{ steps.create-pr.outputs.pull-request-number }}
+
+      - name: Annotate OpenWiki update pull request
+        if: ${{ !cancelled() && steps.create-pr.outputs.pull-request-url != '' }}
+        run: echo "::notice title=OpenWiki update pull request::${{ steps.create-pr.outputs.pull-request-url }}"
 
       - name: Propagate OpenWiki failure
         if: ${{ steps.openwiki.outcome == 'failure' }}
@@ -419,4 +428,4 @@ Upstream schedules personal ingestion with a macOS launchd job running `openwiki
 17 8 * * 1-5 claude -p "Use the openwiki-personal skill to run a source update for gmail." >> "$HOME/.openwiki/logs/ingestion.schedule.log" 2>&1
 ```
 
-Scoped permissions (user-level `~/.claude/settings.json`, since runs are not repo-rooted): allow `Write(~/.openwiki/**)` and `Edit(~/.openwiki/**)` plus the read-only commands from §2 (`find`, `shasum`/`sha256sum`, `date`, `rg`), and whatever read-only MCP tools the sources need. The log directory matches upstream's (`~/.openwiki/logs/`); create it once with `mkdir -p ~/.openwiki/logs`.
+Personal runs are shell-free since upstream 0.6.0. Configure the host to disable shell/terminal/subprocess tools during ingestion; do not reuse §2's repository Bash allowlist. Permit native Read/Glob/Grep and Write/Edit within `~/.openwiki/wiki`, read access to `~/.openwiki/INSTRUCTIONS.md`, a native clock, and only the read-only MCP/source tools that run needs. `openwiki-personal` uses native file snapshots for change detection. Configure authentication and create the scheduler's log directory once outside ingestion; the scheduler's launch command and log redirection are outside the agent's tool surface. A CLI-only source must first be exposed through an appropriate read-only connector.

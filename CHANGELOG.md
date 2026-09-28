@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Upstream sync: bump pin `fd8794b` → `7557f9e` (upstream v0.6.0); reviewed all 17 commits, including the new `src/retrieval/` and `src/linking/` modules. Provider streaming (#932), visualizer URL decoding (#917), installer runtime, upstream wiki updates, and release chores remain out of scope.
+- Port repository retrieval and linked-workspace Q&A (#905): optional `openwiki_search`/`openwiki_read`, explicit ambiguous-workspace selection, exact section reads with wiki identity, and local Markdown fallback; update the managed AGENTS.md snippet to use retrieval only when needed. The MCP server, ranking engine, and workspace registry remain upstream-owned.
+- Port the personal-mode shell boundary (`d3e5f21`) through generation, Q&A, source wiring, and scheduled-run guidance: read-only source tools replace CLI/Git/shell ingestion, connector-relative paths replace host raw-file reads, and native file snapshots/clock tools replace shell bookkeeping. Also remove two stale annotations that contradicted the existing every-run metadata refresh rule.
+- Adopt upstream's exact legacy OpenWiki-section migration (#914), preserving fenced examples and user-edited lines, removing duplicate legacy sections before marker validation, and retaining import-only CLAUDE.md files after migration.
+- Document native parallel-worker semantics (#903) while retaining upstream's sequential host-agent contract; add `omp` and `antigravity` provenance actors (#893/#922), and generated-PR notices in both GitHub Actions examples (#911).
+
 ## 0.5.2 (2026-09-15)
 
 - Upstream sync: bump pin `3bc038d` → `fd8794b` (upstream v0.5.2). Twenty-one commits, six of which touch behavior this port mirrors — including the first prompt-source change since 0.5.0 and the arrival of the Claude-Code-specific fix flagged in the 0.5.1 notes. Out of scope: provider and transport plumbing (#856 Vertex Grok routing, #861/#862 OpenAI-compatible stream normalization and roleless worker messages, #864 OpenRouter 404 retries, #788/#801 reasoning-effort mapping, #847 managed env keys, #869 model-list entries), the `bob` provider runtime (#780 — only its host-registry actor is in scope here), credential-diagnostics redaction (#885), the current-Node requirement (#863), the Windows ctime fingerprint fix (#859 — this port has no fingerprint), upstream's own wiki updates (#854/#873/#880), and the version-packages chore (#860).

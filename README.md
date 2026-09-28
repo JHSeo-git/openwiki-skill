@@ -10,15 +10,15 @@
 
 </div>
 
-Write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.5.2 for coding agents like Claude Code and Codex.
+Write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.6.0 for coding agents like Claude Code and Codex.
 
 The upstream CLI drives an LLM through provider APIs. This port drops that plumbing: your coding agent already *is* the LLM, with filesystem and git tools attached, so it executes the same workflow directly — the upstream system prompts are reproduced verbatim inside the skills, with harness differences marked `[adapted]`. No API key, no runtime, no configuration.
 
 **openwiki-skill gives you:**
 
 - **Agent-written repo docs that stay accurate** — a bounded planner fixes the page set, one worker writes each page and records its material Claims against `repo://` evidence, and updates revisit exactly the pages whose evidence moved, each evaluated against the last commit it was actually verified against rather than one wiki-wide baseline. Clean no-ops when nothing relevant changed; a run that stops early leaves its finished pages committable and flags the rest as still owed.
-- **A personal knowledge wiki** fed by your own sources — MCP servers, web search, local repos — instead of upstream's OAuth connectors.
-- **Wiki-first Q&A** that answers from either wiki, citing pages and their inline source references.
+- **A personal knowledge wiki** fed by read-only MCP/source tools, web search, and repository manifests. Personal runs are shell-free, including bookkeeping; use native file and clock tools, and configure connector authentication outside ingestion.
+- **Wiki-first Q&A** that answers from either wiki, citing pages and their inline source references. With upstream's optional MCP retrieval tools connected, it can search linked repository workspaces and read the exact relevant sections; without them it reads the selected wiki's Markdown directly.
 - **Open Knowledge Format** ([OKF v0.2](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)) output: YAML front matter on every concept page (only `type` required; producer extensions preserved), code-owned `generated` provenance stamped on every body change, per-page `sources` evidence projected from the run's Claims, an evidence-backed concept graph, deterministically generated `index.md` per directory, and automatic normalization of non-compliant pages — wikis stay interoperable with the upstream CLI, so either tool can continue a wiki the other started.
 - **Validated rendering after every run** — broken Mermaid fences degrade to text fences instead of breaking the page, and broken internal links or heading anchors are stamped in place for the next update to repair.
 - **Multilingual wikis** (BCP-47): the output language persists in run metadata, index headings localize, and switching it rewrites every page in the new language. A request naming no identifiable language stops the run instead of quietly producing an English wiki.
@@ -54,7 +54,7 @@ The first run initializes `openwiki/`: a `quickstart.md` entrypoint with a task-
 - "Migrate the wiki to OKF" → just run an update: every run starts by normalizing non-compliant pages (minimal `type`/`title` front matter flagged `openwiki_generated: true`, bodies untouched), then enriches the flagged pages it works on.
 - "Switch the wiki to Korean" → an update that queues every existing page for a rewrite in the new language (front matter titles/descriptions included, code identifiers untouched), localizes index headings, and persists the language so later runs keep writing in it.
 - "Fold our LangSmith traces into the wiki" → a repo update run following [`references/runtime-evidence.md`](skills/openwiki/references/runtime-evidence.md): anomaly-weighted trace sampling synthesized into a `runtime-behavior.md` page plus the code pages it concerns.
-- "How does X work?" → `openwiki-ask` answers from the wiki, citing pages and their inline source references.
+- "How does X work?" → `openwiki-ask` retrieves relevant wiki sections when the question needs repository context, citing pages and their inline source references. Linked-workspace searches keep each result's repository identity; ambiguous workspace choices are resolved with the user. Wikis are not preloaded at task startup.
 - "Set up my personal wiki" / "pull today's Slack into my wiki" → `openwiki-personal` initializes or source-updates `~/.openwiki/wiki`.
 - Steer either wiki with a brief: a user-authored `openwiki/INSTRUCTIONS.md` (repo) or `~/.openwiki/INSTRUCTIONS.md` (personal) is read into every run as the "Wiki brief"; the skills read it but never rewrite it.
 
@@ -75,6 +75,8 @@ This is a read boundary: ignored paths are never read, scanned, or reproduced in
 [skills/openwiki/references/automation.md](skills/openwiki/references/automation.md) covers keyless scheduled updates (local cron or a cloud routine under your subscription — no API key), a scoped permission allowlist for headless runs, CI templates (GitHub Actions PR flow, GitLab MR flow, Bitbucket Pipelines PR flow — CI needs `ANTHROPIC_API_KEY` or a `claude setup-token` token; all clone full history and all open the PR even when the run fails, so a partial update's finished pages can be merged as the next run's starting point), and a Codex headless note.
 
 ## Upstream
+
+Upstream 0.6.0 can run native page workers in parallel. This port follows upstream's host-agent skill, which still processes one page at a time, with quickstart last. It does not implement the native worker pool, MCP server, or `openwiki link` registry. The personal-mode shell restriction is a skill rule here; unattended hosts should also disable shell tools. Existing CLI-only personal sources need a read-only connector.
 
 System prompt, workflow, and metadata semantics derive from [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) (MIT). Pinned commit and sync procedure: [UPSTREAM.md](UPSTREAM.md). Releases track upstream versions in lockstep — what each sync ported is in [CHANGELOG.md](CHANGELOG.md) and the [GitHub Releases](https://github.com/JHSeo-git/openwiki-skill/releases). The `openwiki-ask` skill and the keyless automation angle were inspired by [jatinmayekar/openwiki-for-claude-code](https://github.com/jatinmayekar/openwiki-for-claude-code) (MIT).
 
