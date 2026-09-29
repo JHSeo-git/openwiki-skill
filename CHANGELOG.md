@@ -1,5 +1,7 @@
 # Changelog
 
+## Unreleased
+
 ## 0.6.1 (2026-09-29)
 
 - Upstream sync: bump pin `7557f9e` → `86f46f8` (upstream v0.6.1); reviewed all 17 commits. Provider, diagnostics, telemetry, installer/runtime packaging, generated-wiki updates, and release chores remain out of scope.
