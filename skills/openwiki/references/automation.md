@@ -32,12 +32,9 @@ Safer than `--dangerously-skip-permissions` on your own machine. Add to the **ta
     "allow": [
       "Bash(git --no-pager status:*)",
       "Bash(git --no-pager rev-parse:*)",
-      "Bash(git --no-pager log:*)",
       "Bash(git --no-pager diff:*)",
-      "Bash(git --no-pager show:*)",
-      "Bash(git --no-pager blame:*)",
-      "Bash(rg:*)",
-      "Bash(find:*)",
+      "Bash(git --no-pager ls-files:*)",
+      "Bash(find openwiki:*)",
       "Bash(shasum:*)",
       "Bash(sha256sum:*)",
       "Bash(date:*)",
@@ -56,6 +53,8 @@ Safer than `--dangerously-skip-permissions` on your own machine. Add to the **ta
 ```
 
 Read/Glob/Grep are already read-only, the git commands above are read-only, and the skill itself forbids reading `.env`/secrets. Writes stay scoped to `openwiki/**` plus the two root instruction files. `head`/`sed`/`cut` cover Step 2's body-hash helper and Step 5's `sources` id derivation. This allowlist is for scheduled **update** runs only: since upstream 0.4.0 an init replaces the wiki, which needs `mktemp`/`cp`/`rm -rf`/`mkdir` for the backup-and-wipe transaction — do not grant those unattended.
+
+**[adapted]** Since upstream 0.6.1 (#888), repository research uses native filesystem tools, even without ignore rules. The Bash entries here support only this port's lifecycle bookkeeping; command-prefix permissions do not enforce argument/path confinement. Configure the host sandbox accordingly. Step 2's fixed wiki snapshot helper also needs scoped file enumeration, and Step 6 needs a native atomic replacement operation or a narrowly scoped write/rename transaction for `.last-update.json` and its unique temporary sibling. Generic Write/Edit permission does not prove atomicity; verify these capabilities before scheduling. Only an existing CLAUDE.md may be refreshed; setup no longer creates it (#933).
 
 ## 3. CI with an API credential
 
@@ -130,15 +129,21 @@ jobs:
         if: ${{ !cancelled() }}
         run: rm -f -- openwiki/.run.json
 
+      - name: List OpenWiki update paths
+        id: paths
+        if: ${{ !cancelled() }}
+        # Missing CLAUDE.md must not make staging the whole update fail.
+        run: |
+          paths=openwiki,AGENTS.md
+          if [ -e CLAUDE.md ]; then paths="$paths,CLAUDE.md"; fi
+          echo "list=$paths" >> "$GITHUB_OUTPUT"
+
       - name: Create OpenWiki update pull request
         id: create-pr
         if: ${{ !cancelled() }}
         uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7
         with:
-          add-paths: |
-            openwiki
-            AGENTS.md
-            CLAUDE.md
+          add-paths: ${{ steps.paths.outputs.list }}
           branch: openwiki/update
           commit-message: "docs: update OpenWiki"
           title: "docs: update OpenWiki"
@@ -249,16 +254,22 @@ jobs:
           fi
           echo "status=${wiki_status}" >> "$GITHUB_OUTPUT"
 
+      - name: List OpenWiki update paths
+        id: paths
+        if: ${{ !cancelled() }}
+        # Missing CLAUDE.md must not make staging the whole update fail.
+        run: |
+          paths=openwiki,AGENTS.md
+          if [ -e CLAUDE.md ]; then paths="$paths,CLAUDE.md"; fi
+          echo "list=$paths" >> "$GITHUB_OUTPUT"
+
       - name: Create OpenWiki update pull request
         id: create-pr
         if: ${{ !cancelled() }}
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           token: ${{ secrets.OPENWIKI_PR_TOKEN }}
-          add-paths: |
-            openwiki
-            AGENTS.md
-            CLAUDE.md
+          add-paths: ${{ steps.paths.outputs.list }}
           branch: openwiki/update
           commit-message: "docs: update OpenWiki"
           title: "docs: update OpenWiki"
@@ -343,7 +354,8 @@ openwiki_update:
       fi
       OPENWIKI_BRANCH="openwiki/update-${CI_PIPELINE_ID}"
       git checkout -b "$OPENWIKI_BRANCH"
-      git add openwiki AGENTS.md CLAUDE.md
+      git add -- openwiki AGENTS.md
+      if [ -e CLAUDE.md ]; then git add -- CLAUDE.md; fi
       git commit -m "docs: update OpenWiki"
       git push "https://oauth2:${OPENWIKI_GITLAB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" "$OPENWIKI_BRANCH"
       curl --fail --request POST \
@@ -397,7 +409,8 @@ pipelines:
               fi
               OPENWIKI_BRANCH="openwiki/update-${BITBUCKET_BUILD_NUMBER}"
               git checkout -b "$OPENWIKI_BRANCH"
-              git add openwiki AGENTS.md CLAUDE.md
+              git add -- openwiki AGENTS.md
+              if [ -e CLAUDE.md ]; then git add -- CLAUDE.md; fi
               git commit -m "docs: update OpenWiki"
               git push "https://x-token-auth:${OPENWIKI_BITBUCKET_TOKEN}@bitbucket.org/${BITBUCKET_WORKSPACE}/${BITBUCKET_REPO_SLUG}.git" "$OPENWIKI_BRANCH"
               curl --fail --request POST \

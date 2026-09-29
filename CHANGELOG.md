@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Upstream sync: bump pin `7557f9e` → `86f46f8` (upstream v0.6.1); reviewed all 17 commits. Provider, diagnostics, telemetry, installer/runtime packaging, generated-wiki updates, and release chores remain out of scope.
+- Stop creating missing CLAUDE.md files (#933), preserve refresh rules for existing files, and conditionally stage CLAUDE.md in all four CI recipes.
+- Require relative repository Markdown links and flag root-absolute hrefs (#901); retain personal-wiki root-relative links and teach Q&A to read introduction results by their exact H1 anchor (#952).
+- Require atomic `.last-update.json` replacement for repository and personal runs, including no-op and failure paths (#840); preserve the first accepted plan after a conflicting submission (#906).
+- Report repository pages with code-derived front matter or missing descriptions without failing validation (#902), refresh rechecked evidence line ranges (#936), and recognize the `pi` provenance actor (#897).
+- Apply repository shell restrictions to research and Q&A (#888), retaining explicitly scoped host-side lifecycle bookkeeping as an adaptation and updating unattended-run guidance.
+
 ## 0.6.0 (2026-09-28)
 
 - Upstream sync: bump pin `fd8794b` → `7557f9e` (upstream v0.6.0); reviewed all 17 commits, including the new `src/retrieval/` and `src/linking/` modules. Provider streaming (#932), visualizer URL decoding (#917), installer runtime, upstream wiki updates, and release chores remain out of scope.

@@ -10,7 +10,7 @@
 
 </div>
 
-Write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.6.0 for coding agents like Claude Code and Codex.
+Write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.6.1 for coding agents like Claude Code and Codex.
 
 The upstream CLI drives an LLM through provider APIs. This port drops that plumbing: your coding agent already *is* the LLM, with filesystem and git tools attached, so it executes the same workflow directly — the upstream system prompts are reproduced verbatim inside the skills, with harness differences marked `[adapted]`. No API key, no runtime, no configuration.
 
@@ -37,13 +37,13 @@ Then ask your agent:
 
 > Generate documentation for this repository
 
-The first run initializes `openwiki/`: a `quickstart.md` entrypoint with a task-routing table, focused section pages under a repository-specific hierarchy, the upstream marker snippet (`<!-- OPENWIKI:START/END -->`) in root `AGENTS.md` and `CLAUDE.md`, and run metadata in `openwiki/.last-update.json`. Keep it current by asking "Update the wiki" — or schedule it (see [Automation](#automation)). Since upstream v0.4.0 an **init regenerates the wiki from scratch**, keeping only a user-authored `openwiki/INSTRUCTIONS.md`; reach for update to preserve existing pages.
+The first run initializes `openwiki/`: a `quickstart.md` entrypoint with a task-routing table, focused section pages under a repository-specific hierarchy, the upstream marker snippet (`<!-- OPENWIKI:START/END -->`) in root `AGENTS.md` and an existing `CLAUDE.md`, and run metadata in `openwiki/.last-update.json`. Keep it current by asking "Update the wiki" — or schedule it (see [Automation](#automation)). Since upstream v0.4.0 an **init regenerates the wiki from scratch**, keeping only a user-authored `openwiki/INSTRUCTIONS.md`; reach for update to preserve existing pages.
 
 ## Skills
 
 | Skill | What it does |
 |---|---|
-| [`openwiki`](skills/openwiki/SKILL.md) | Generate (init, regenerating from scratch) or surgically refresh (update) a repo's `openwiki/` wiki — upstream's code mode, as a plan → page-queue → finalize lifecycle. Auto-detects the mode; manages the marker snippet in root `AGENTS.md` and `CLAUDE.md`. |
+| [`openwiki`](skills/openwiki/SKILL.md) | Generate (init, regenerating from scratch) or surgically refresh (update) a repo's `openwiki/` wiki — upstream's code mode, as a plan → page-queue → finalize lifecycle. Auto-detects the mode; manages the marker snippet in root `AGENTS.md` and an existing `CLAUDE.md`. |
 | [`openwiki-personal`](skills/openwiki-personal/SKILL.md) | Build or maintain the personal knowledge wiki at `~/.openwiki/wiki` — upstream's personal mode. Per-source wiring guidance: [`references/connectors.md`](skills/openwiki-personal/references/connectors.md). |
 | [`openwiki-ask`](skills/openwiki-ask/SKILL.md) | Answer questions from either wiki, wiki-first, citing pages. |
 | [`mermaid-diagrams`](skills/mermaid-diagrams/SKILL.md) | Diagram-type choices and Mermaid syntax-safety rules the wiki skills consult when embedding diagrams — upstream's bundled skill. |
@@ -75,6 +75,8 @@ This is a read boundary: ignored paths are never read, scanned, or reproduced in
 [skills/openwiki/references/automation.md](skills/openwiki/references/automation.md) covers keyless scheduled updates (local cron or a cloud routine under your subscription — no API key), a scoped permission allowlist for headless runs, CI templates (GitHub Actions PR flow, GitLab MR flow, Bitbucket Pipelines PR flow — CI needs `ANTHROPIC_API_KEY` or a `claude setup-token` token; all clone full history and all open the PR even when the run fails, so a partial update's finished pages can be merged as the next run's starting point), and a Codex headless note.
 
 ## Upstream
+
+The current sync targets upstream v0.6.1. Repository pages use relative Markdown links; finalization reports fallback metadata and missing descriptions without failing the run. Metadata updates use atomic replacement, and repository research uses native file tools while the host performs scoped lifecycle bookkeeping. Setup creates AGENTS.md when needed and refreshes CLAUDE.md only if it already exists.
 
 Upstream 0.6.0 can run native page workers in parallel. This port follows upstream's host-agent skill, which still processes one page at a time, with quickstart last. It does not implement the native worker pool, MCP server, or `openwiki link` registry. The personal-mode shell restriction is a skill rule here; unattended hosts should also disable shell tools. Existing CLI-only personal sources need a read-only connector.
 
