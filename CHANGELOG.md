@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Upstream sync: bump pin `86f46f8` → `c0173dc` (upstream v0.7.0); reviewed all 16 commits and 86 changed files. Prompts, Claims, generation, retrieval, OKF, bundled skills, and automation examples are unchanged.
+- Recognize GitHub Copilot CLI's `copilot` provenance actor in repository and personal wiki output (#966; thanks @waseem-k-08), preserving existing authorship on unchanged pages.
+- Refresh version references and document exclusions: native Copilot installation (#966), Entra ID gateway authentication (#975), LangSmith run-thread grouping and trace names (#972), runtime dependency/security updates, generated-wiki refreshes, and release chores.
+
 ## 0.6.1 (2026-09-29)
 
 - Upstream sync: bump pin `7557f9e` → `86f46f8` (upstream v0.6.1); reviewed all 17 commits. Provider, diagnostics, telemetry, installer/runtime packaging, generated-wiki updates, and release chores remain out of scope.

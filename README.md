@@ -10,7 +10,7 @@
 
 </div>
 
-Write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.6.1 for coding agents like Claude Code and Codex.
+Write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.7.0 for coding agents like Claude Code and Codex.
 
 The upstream CLI drives an LLM through provider APIs. This port drops that plumbing: your coding agent already *is* the LLM, with filesystem and git tools attached, so it executes the same workflow directly — the upstream system prompts are reproduced verbatim inside the skills, with harness differences marked `[adapted]`. No API key, no runtime, no configuration.
 
@@ -76,7 +76,7 @@ This is a read boundary: ignored paths are never read, scanned, or reproduced in
 
 ## Upstream
 
-The current sync targets upstream v0.6.1. Repository pages use relative Markdown links; finalization reports fallback metadata and missing descriptions without failing the run. Metadata updates use atomic replacement, and repository research uses native file tools while the host performs scoped lifecycle bookkeeping. Setup creates AGENTS.md when needed and refreshes CLAUDE.md only if it already exists.
+The current sync targets upstream v0.7.0. Repository and personal wiki output now recognize GitHub Copilot CLI as the `copilot` provenance actor. The generation prompts and lifecycle are unchanged from v0.6.1. Upstream's Copilot installer, Microsoft Entra ID gateway authentication, and LangSmith run-thread tracing belong to its native runtime; this port uses the coding agent's own tools and authentication.
 
 Upstream 0.6.0 can run native page workers in parallel. This port follows upstream's host-agent skill, which still processes one page at a time, with quickstart last. It does not implement the native worker pool, MCP server, or `openwiki link` registry. The personal-mode shell restriction is a skill rule here; unattended hosts should also disable shell tools. Existing CLI-only personal sources need a read-only connector.
 
