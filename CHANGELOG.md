@@ -1,5 +1,7 @@
 # Changelog
 
+## Unreleased
+
 ## 0.7.0 (2026-10-03)
 
 - Upstream sync: bump pin `86f46f8` → `c0173dc` (upstream v0.7.0); reviewed all 16 commits and 86 changed files. Prompts, Claims, generation, retrieval, OKF, bundled skills, and automation examples are unchanged.
