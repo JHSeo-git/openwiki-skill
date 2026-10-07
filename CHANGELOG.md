@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Upstream sync: bump pin `c0173dc` → `0db6dcf` (upstream v0.7.1); reviewed all 15 commits and 54 changed files, with runtime-only changes documented in UPSTREAM.md.
+- Scope explicitly targeted repository updates to requested pages/files and affected navigation (#865; thanks @HwangJohn), and retry unfinished pages once from their original snapshot before skipping (#913; thanks @sloemo01).
+- Ignore code examples during link validation (#957; thanks @breken-ai), tolerate malformed percent escapes (#980; thanks @Zhuoxi2000), and accept GitHub line anchors on Markdown targets (#986; thanks @drakeo338).
+- Preserve compact YAML sequences during metadata edits (#969; thanks @Yi-111-a), stable workspace ID precedence (#955; thanks @Yashwanth-Kumar-Kotla), and collision-free retrieval anchors (#929; thanks @c020627).
+- Preserve literal prompt values (#958; thanks @breken-ai) and serialize same-file wiki operations through host-side ordering (#979; thanks @SammyTourani).
+
 ## 0.7.0 (2026-10-03)
 
 - Upstream sync: bump pin `86f46f8` → `c0173dc` (upstream v0.7.0); reviewed all 16 commits and 86 changed files. Prompts, Claims, generation, retrieval, OKF, bundled skills, and automation examples are unchanged.

@@ -1,6 +1,6 @@
 # Planning phase — planner prompt, submission schema, and plan validation
 
-> Reproduced from upstream `src/agent/repository-prompts.ts` `createRepositoryPlannerPrompt` (v0.7.0, unchanged since 0.5.2), with its interpolated context blocks rendered in place as SKILL.md Step 3 describes. The submission schema is upstream `src/agent/repository-runner.ts` `PlanSchema`; the validation rules are upstream `src/generation/page-jobs.ts` `createRepositoryPlan`. **[adapted]** upstream's `/`-rooted virtual paths (`/openwiki/quickstart.md`) are the wiki's canonical page identifiers throughout the lifecycle — keep writing them that way in the plan, and read `/openwiki/x.md` as the real repo-relative file `openwiki/x.md` when you touch the filesystem.
+> Reproduced from upstream `src/agent/repository-prompts.ts` `createRepositoryPlannerPrompt` (v0.7.1, scoped-update mandate added in #865), with its interpolated context blocks rendered in place as SKILL.md Step 3 describes. The submission schema is upstream `src/agent/repository-runner.ts` `PlanSchema`; the validation rules are upstream `src/generation/page-jobs.ts` `createRepositoryPlan`. **[adapted]** upstream's `/`-rooted virtual paths (`/openwiki/quickstart.md`) are the wiki's canonical page identifiers throughout the lifecycle — keep writing them that way in the plan, and read `/openwiki/x.md` as the real repo-relative file `openwiki/x.md` when you touch the filesystem.
 >
 > Since 0.4.0 (#713) repository generation is a two-role lifecycle: **one bounded planner** decides the complete page set, then **one fresh worker per page** writes it (`references/prompt-page.md`). Upstream gives the planner read-only filesystem tools (`read_file`, `ls`, `glob`, `grep`), no shell, no write access to any wiki page, and strips the delegation tool — **[adapted]** hold yourself to the same boundary while planning: research read-only, write nothing, and do not hand the planning out to a subagent.
 
@@ -23,6 +23,18 @@ For every page provide a concise purpose and useful seedPaths. seedPaths are sta
 User and connector planning context (*rendered only when the run has one — here: the user's additional instruction from SKILL.md's mode resolution; absent otherwise, along with this heading*):
 
 > *(that text)*
+
+*(Update runs with non-empty planning context only — omit this block for init or absent context; upstream 0.7.1, #865.)*
+
+When the user planning context names files or OpenWiki pages, says to document
+only specific files, or otherwise limits the requested documentation scope,
+treat that as a hard scoped update mandate. Preserve unrelated page
+framing/theme and the existing information architecture; do not use a narrow
+request as permission for a broad wiki refresh. Schedule only directly requested
+pages/files and genuinely affected cross-references or navigation. Do not refresh
+/openwiki/quickstart.md merely because a scoped update touches other pages;
+include it when the user explicitly requests it or when the page map, navigation,
+or task-routing links actually change.
 
 *(Update runs only — the whole block below, through the windows, replaces the flat "Changed repository paths" list upstream rendered until 0.4.3. New in 0.5.0, #720.)*
 

@@ -10,7 +10,7 @@
 
 </div>
 
-Write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.7.0 for coding agents like Claude Code and Codex.
+Write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.7.1 for coding agents like Claude Code and Codex.
 
 The upstream CLI drives an LLM through provider APIs. This port drops that plumbing: your coding agent already *is* the LLM, with filesystem and git tools attached, so it executes the same workflow directly — the upstream system prompts are reproduced verbatim inside the skills, with harness differences marked `[adapted]`. No API key, no runtime, no configuration.
 
@@ -51,6 +51,7 @@ The first run initializes `openwiki/`: a `quickstart.md` entrypoint with a task-
 ## Use
 
 - "Update the wiki" → a planner scopes the work from the git range since the last documented commit plus any page whose cited evidence moved, then one worker per page revises it; no-ops cleanly (early git check + evidence preflight) when nothing relevant changed.
+- "Document only src/auth.ts" → a scoped update preserves unrelated page framing and architecture, revising requested coverage and affected links/navigation; quickstart is included only when requested or its routing changes. Required evidence/language repairs and deterministic finalization still apply.
 - "Migrate the wiki to OKF" → just run an update: every run starts by normalizing non-compliant pages (minimal `type`/`title` front matter flagged `openwiki_generated: true`, bodies untouched), then enriches the flagged pages it works on.
 - "Switch the wiki to Korean" → an update that queues every existing page for a rewrite in the new language (front matter titles/descriptions included, code identifiers untouched), localizes index headings, and persists the language so later runs keep writing in it.
 - "Fold our LangSmith traces into the wiki" → a repo update run following [`references/runtime-evidence.md`](skills/openwiki/references/runtime-evidence.md): anomaly-weighted trace sampling synthesized into a `runtime-behavior.md` page plus the code pages it concerns.
@@ -76,7 +77,7 @@ This is a read boundary: ignored paths are never read, scanned, or reproduced in
 
 ## Upstream
 
-The current sync targets upstream v0.7.0. Repository and personal wiki output now recognize GitHub Copilot CLI as the `copilot` provenance actor. The generation prompts and lifecycle are unchanged from v0.6.1. Upstream's Copilot installer, Microsoft Entra ID gateway authentication, and LangSmith run-thread tracing belong to its native runtime; this port uses the coding agent's own tools and authentication.
+The current sync targets upstream v0.7.1. Explicitly scoped repository updates preserve unrelated page framing and navigation. An unfinished page gets one retry from its original snapshot before it is skipped; rate limits defer immediately and fatal persistence failures still abort. Both wiki skills handle code examples, malformed percent escapes, Markdown source-line links, and compact YAML sequences during finalization. Q&A preserves stable workspace IDs and unique retrieval anchors. Literal prompt insertion and ordered same-file operations are host-side rules here; provider fixes, terminal processing, dependency updates, and native runtime locks remain upstream-owned.
 
 Upstream 0.6.0 can run native page workers in parallel. This port follows upstream's host-agent skill, which still processes one page at a time, with quickstart last. It does not implement the native worker pool, MCP server, or `openwiki link` registry. The personal-mode shell restriction is a skill rule here; unattended hosts should also disable shell tools. Existing CLI-only personal sources need a read-only connector.
 
