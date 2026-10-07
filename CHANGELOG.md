@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.7.1 (2026-10-07)
 
 - Upstream sync: bump pin `c0173dc` → `0db6dcf` (upstream v0.7.1); reviewed all 15 commits and 54 changed files, with runtime-only changes documented in UPSTREAM.md.
 - Scope explicitly targeted repository updates to requested pages/files and affected navigation (#865; thanks @HwangJohn), and retry unfinished pages once from their original snapshot before skipping (#913; thanks @sloemo01).
