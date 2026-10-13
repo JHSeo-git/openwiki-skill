@@ -10,7 +10,7 @@
 
 </div>
 
-Write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.7.1 for coding agents like Claude Code and Codex.
+Write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.7.2 for coding agents like Claude Code and Codex.
 
 The upstream CLI drives an LLM through provider APIs. This port drops that plumbing: your coding agent already *is* the LLM, with filesystem and git tools attached, so it executes the same workflow directly — the upstream system prompts are reproduced verbatim inside the skills, with harness differences marked `[adapted]`. No API key, no runtime, no configuration.
 
@@ -77,7 +77,7 @@ This is a read boundary: ignored paths are never read, scanned, or reproduced in
 
 ## Upstream
 
-The current sync targets upstream v0.7.1. Explicitly scoped repository updates preserve unrelated page framing and navigation. An unfinished page gets one retry from its original snapshot before it is skipped; rate limits defer immediately and fatal persistence failures still abort. Both wiki skills handle code examples, malformed percent escapes, Markdown source-line links, and compact YAML sequences during finalization. Q&A preserves stable workspace IDs and unique retrieval anchors. Literal prompt insertion and ordered same-file operations are host-side rules here; provider fixes, terminal processing, dependency updates, and native runtime locks remain upstream-owned.
+The current sync targets upstream v0.7.2. Personal-wiki translation preserves the original page and marks it for retry when output is empty or cut off at the output-token limit. Q&A uses retrieval's collision-safe `section` alias for an empty symbol-only heading anchor, without treating it as a browser link. Repository workers recognize host-exposed Bedrock throttling signals and defer the page without immediate retry. Scoped updates, page rollback, link validation, and literal prompt insertion retain their existing rules; native installer ownership, provider retries, dependency updates, and runtime locks remain upstream-owned.
 
 Upstream 0.6.0 can run native page workers in parallel. This port follows upstream's host-agent skill, which still processes one page at a time, with quickstart last. It does not implement the native worker pool, MCP server, or `openwiki link` registry. The personal-mode shell restriction is a skill rule here; unattended hosts should also disable shell tools. Existing CLI-only personal sources need a read-only connector.
 

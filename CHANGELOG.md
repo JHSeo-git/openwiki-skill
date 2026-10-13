@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Upstream sync: bump pin `0db6dcf` → `27b3c76` (upstream v0.7.2); reviewed all 10 commits and 62 changed files, with runtime-only changes documented in UPSTREAM.md.
+- Preserve original personal-wiki pages and pending retry markers when translation is empty or hits the output-token limit (#1008; thanks @xpeng5278-web).
+- Preserve retrieval's collision-safe `section` alias for the first symbol-only heading without changing Markdown link validation (#1001; thanks @Yashwanth-Kumar-Kotla).
+- Treat host-exposed Bedrock throttling signals as rate limits, restoring and deferring the page without immediate retry (#1011; thanks @xpeng5278-web).
+
 ## 0.7.1 (2026-10-07)
 
 - Upstream sync: bump pin `c0173dc` → `0db6dcf` (upstream v0.7.1); reviewed all 15 commits and 54 changed files, with runtime-only changes documented in UPSTREAM.md.
