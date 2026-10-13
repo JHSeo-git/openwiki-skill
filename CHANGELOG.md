@@ -1,5 +1,7 @@
 # Changelog
 
+## Unreleased
+
 ## 0.7.2 (2026-10-13)
 
 - Upstream sync: bump pin `0db6dcf` → `27b3c76` (upstream v0.7.2); reviewed all 10 commits and 62 changed files, with runtime-only changes documented in UPSTREAM.md.
