@@ -2,7 +2,26 @@
 
 This skill is derived from [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) (MIT).
 
-- Pinned commit: `27b3c76cb9b28bc3bb31ccbeb4f0192b0802cf96` (2026-10-09, v0.7.2)
+- Pinned commit: `b290e6915349c985dc1ea210ac4e8a6f6f7db5ef` (2026-11-02, v0.7.3)
+
+## 0.7.3 sync
+
+Reviewed all 29 commits from v0.7.2 to v0.7.3 and the complete changed-path inventory (70 files, including 18 source files). The only added source path is `src/visualize/graph-types.ts`, a browser-safe type extraction outside this port. These updates supersede the historical mapping details below:
+
+| Upstream change | Port decision |
+|---|---|
+| `src/agent/repository-prompts.ts` — #1076 | Copy the repository-layout block into both planner and page prompts and the Markdown-file path requirement into the planner. **[adapted]** The filesystem root is the repository root here, not the host OS root; `/openwiki/x.md` remains the canonical lifecycle identifier for real `openwiki/x.md`. |
+| `src/agent/repository-runner.ts` — #1075 | Bound planner and page submission correction loops to five evaluations per worker attempt. **[adapted]** Count self-check gate evaluations, including rejected payloads. No accepted plan means planning fails; page exhaustion follows the existing snapshot/one-retry/skip protocol, with a fresh counter per attempt. Native middleware and provider controls remain omitted. |
+| `src/agent/utils.ts`, `src/generation/repository-run.ts` — #1044, #1045 | Capture HEAD with `rev-parse --verify --quiet` and require a full lowercase 40/64-character object ID; omit unavailable HEAD instead of storing Git error text. A missing/malformed/unreadable baseline commit requires full review, retaining its recorded identity and preventing inferred unchanged coverage. **[adapted]** Apply to fallback metadata windows during planning, preserving the existing early no-op rules; the read-only native manifest must not force repeated full reviews after a successful port update. The port still never writes the native manifest. |
+| `src/retrieval/wiki.ts` — #1072 | Preserve Unicode combining marks in retrieval heading anchors; strip emoji variation selectors. Pass returned anchors exactly, including decomposed accents. Markdown link validation is unchanged. |
+| `src/retrieval/wiki.ts`, `src/integrations/core/retrieval-tools.ts`, MCP instructions, bundled integration skill — #1080 | Document optional `includeProvenance: true` reads: ordered recorded frontmatter sources plus Claim evidence resources and stored versions. They do not assert freshness, existence, or semantic verification. **[adapted]** Markdown fallback uses existing sources and invents no missing Claim IDs/versions. |
+| `src/integrations/pi/openwiki.ts` — #1056 | Use the same retrieval contract when Pi exposes it, preserving the generic host-tool route. Native registration, bridge configuration directory propagation, and workspace registry remain upstream-owned. |
+| `src/agent/docs-only-backend.ts` — #1065 | Record that native repository chat now enforces docs-only writes. Q&A in this port already has a stricter read-only rule; keep it and continue routing requested writes through the wiki skills. |
+| `src/ingestion/code-mode.ts` — #1063 | Copy the maintenance-process sentence into the managed AGENTS.md snippet, avoiding an unsupported claim that scheduled updates are active. Refresh this repository's existing narrowed managed block without adding unrelated retrieval rules. |
+
+Verified unchanged: personal/chat prompt templates, shared prompt rendering, Claims guidance and implementation, page-job plan/submission validation, page-manifest implementation, OKF/index labels, Mermaid, Markdown link validation, provenance actors, linking/workspace selection, atomic-file helper, bundled Mermaid skill, and automation examples. Repository prompts change only for layout guidance; personal-mode semantics are unchanged.
+
+Out of scope: Anthropic/direct-Vertex request streaming (#1047), abort-aware connector HTTP retries (#1079), compiled-host Pi bridge startup (#1062), visualizer frontmatter/non-ASCII navigation fixes (#1050/#1052/#1070), React-compatible CLI renderer and browser graph type extraction (#990), LangSmith peer alignment (#1054), runtime/tooling/security dependency and CI updates (#1073/#1086/#1092/#1093/#1094/#1096/#1098), upstream generated-wiki refreshes (#1023/#1043), and release chores (#1055). This repository ships no provider client, connector runtime, visualizer, native bridge, or runtime dependencies.
 
 ## 0.7.2 sync
 

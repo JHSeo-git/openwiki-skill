@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Upstream sync: bump pin `27b3c76` → `b290e69` (upstream v0.7.3); reviewed all 29 commits and 70 changed files, with runtime-only changes documented in UPSTREAM.md.
+- Clarify source/wiki layout and Markdown plan paths (#1076; thanks @jrodeiro5), and cap submission correction loops at five evaluations per worker attempt (#1075; thanks @jrodeiro5).
+- Require full review for unreadable page baselines and omit unavailable HEAD instead of recording Git error text (#1045/#1044; thanks @naveecode).
+- Add optional recorded-provenance reads (#1080; thanks @Macedopy), preserve combining marks in retrieval anchors (#1072; thanks @RaphaelFakhri), and recognize Pi's retrieval tools (#1056; thanks @MTG-Thomas).
+- Avoid assuming scheduled maintenance is active (#1063; thanks @MTG-Thomas), and document repository-chat write confinement while retaining read-only Q&A (#1065; thanks @jkennedyvz).
+
 ## 0.7.2 (2026-10-13)
 
 - Upstream sync: bump pin `0db6dcf` → `27b3c76` (upstream v0.7.2); reviewed all 10 commits and 62 changed files, with runtime-only changes documented in UPSTREAM.md.

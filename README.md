@@ -10,7 +10,7 @@
 
 </div>
 
-Write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.7.2 for coding agents like Claude Code and Codex.
+Write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.7.3 for coding agents like Claude Code and Codex.
 
 The upstream CLI drives an LLM through provider APIs. This port drops that plumbing: your coding agent already *is* the LLM, with filesystem and git tools attached, so it executes the same workflow directly — the upstream system prompts are reproduced verbatim inside the skills, with harness differences marked `[adapted]`. No API key, no runtime, no configuration.
 
@@ -77,7 +77,7 @@ This is a read boundary: ignored paths are never read, scanned, or reproduced in
 
 ## Upstream
 
-The current sync targets upstream v0.7.2. Personal-wiki translation preserves the original page and marks it for retry when output is empty or cut off at the output-token limit. Q&A uses retrieval's collision-safe `section` alias for an empty symbol-only heading anchor, without treating it as a browser link. Repository workers recognize host-exposed Bedrock throttling signals and defer the page without immediate retry. Scoped updates, page rollback, link validation, and literal prompt insertion retain their existing rules; native installer ownership, provider retries, dependency updates, and runtime locks remain upstream-owned.
+The current sync targets upstream v0.7.3. Repository planning and page work explicitly locate source outside the wiki and bound submission correction loops to five evaluations per attempt. Unreadable baseline commits require full review, and repositories without commits never record Git error text as a checkpoint. Q&A can request recorded provenance with `includeProvenance: true` and preserves combining marks in retrieval anchors; recorded evidence is not a freshness or verification guarantee. Managed guidance points to the configured maintenance process without assuming automatic updates are active. Provider streaming, connector retries, native bridges, visualizer changes, and runtime dependency updates remain upstream-owned.
 
 Upstream 0.6.0 can run native page workers in parallel. This port follows upstream's host-agent skill, which still processes one page at a time, with quickstart last. It does not implement the native worker pool, MCP server, or `openwiki link` registry. The personal-mode shell restriction is a skill rule here; unattended hosts should also disable shell tools. Existing CLI-only personal sources need a read-only connector.
 

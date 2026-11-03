@@ -1,6 +1,6 @@
 # Page phase — page-worker prompt, Claims contract, and submission gates
 
-> Reproduced from upstream `src/agent/repository-prompts.ts` `createRepositoryPagePrompt` (v0.7.2, unchanged since 0.6.1's relative-link paragraph in #901) with its job fields rendered in place, plus the two shared standards it interpolates verbatim from `src/claims/guidance.ts` (`CLAIMS_SUBSTANCE_GUIDANCE`, `CLAIMS_RECONCILIATION_GUIDANCE` — the latter rewritten in 0.5.0, #769). The submission gates are upstream `src/generation/repository-run.ts` `submitRepositoryPage` + `src/generation/page-jobs.ts` `reconcilePageClaims` and `src/agent/repository-runner.ts`'s `submit_page` tool. **[adapted]** `/openwiki/x.md` is the page's canonical lifecycle identifier; the real file is `openwiki/x.md`.
+> Reproduced from upstream `src/agent/repository-prompts.ts` `createRepositoryPagePrompt` (v0.7.3, including #1076’s repository-layout guidance) with its job fields rendered in place, plus the two shared standards it interpolates verbatim from `src/claims/guidance.ts` (`CLAIMS_SUBSTANCE_GUIDANCE`, `CLAIMS_RECONCILIATION_GUIDANCE` — the latter rewritten in 0.5.0, #769). The submission gates are upstream `src/generation/repository-run.ts` `submitRepositoryPage` + `src/generation/page-jobs.ts` `reconcilePageClaims` and `src/agent/repository-runner.ts`'s `submit_page` tool. **[adapted]** `/openwiki/x.md` is the page's canonical lifecycle identifier; the real file is `openwiki/x.md`. In the layout block below, filesystem root means the repository root; `/src/x.ts` maps to repository-relative `src/x.ts`, never the host OS root.
 >
 > **Read this first — how much of 0.5.0's sparse reconciliation is live here.** Upstream 0.5.0 (#769) stopped round-tripping a page's whole Claim set through the model: the worker now submits only the *decisions* its edits require (`confirmedClaimIds` / `claims` / `retractedClaimIds`), every omitted issue-free Claim is retained deterministically, and the complete set is available on demand through a new `inspect_claims` tool. That machinery is built on the `openwiki/.claims/<page>.json` sidecar, which this port deliberately does not keep (SKILL.md Step 5) — so this port has **no persisted Claim ids at all**, and the id-keyed fields below have nothing to name. What survives here, and is enforced in the gates, is the part that does not need ids: do not re-derive a page's whole grounding on a focused update, read the page's existing OKF `sources` when you need to know what it was grounded on, and give every resource Step 1 flagged as stale or unresolved an explicit recheck decision rather than leaving it as-is. Upstream's text is kept verbatim regardless, so the next sync stays line-mappable.
 >
@@ -44,6 +44,9 @@ tags: [<stable English tag>, ...]
 ```
 
 Do not author generated, verified, sources, timestamp, or OpenWiki control fields; OpenWiki owns those. On update preserve unknown producer-defined frontmatter fields unless they are factually wrong.
+
+Repository files are at the filesystem root (for example /src/agent/index.ts);
+the wiki lives under /openwiki/. Search and read source outside /openwiki/.
 
 Research deeply enough to explain the important responsibilities, entrypoints, mechanisms/control flow, relationships, state/lifecycle, invariants/failures, extension points, configuration/operations, and focused tests that actually matter for this topic. Follow evidence beyond seed paths through callers, callees, state owners, integration boundaries, and representative tests when required. Do not turn the page into a source-file inventory.
 
@@ -108,6 +111,8 @@ Its payload is sparse since 0.5.0 (#769) — every field optional, no complete s
 ```
 
 The old `claims`-only payload carrying the complete set with a `min(1)` floor is gone. What replaced the floor is a *net* rule applied after reconciliation rather than to the payload: `existing − retracted + added` must be at least 1, and upstream rejects a submission that leaves it at zero with `Completed factual page <page> must retain or establish at least one material Claim.` A page can now legitimately submit *nothing* — every Claim retained by omission — which the old schema could not express.
+
+**Submission limit** (upstream 0.7.3, #1075): at most five `submit_page` calls per worker attempt. **[adapted]** Count evaluations of the gate below, including rejections. Stop on success; if five evaluations fail, end this attempt and use SKILL.md Step 4’s snapshot/one-retry protocol.
 
 **[adapted]** You have no such tool, and no persisted Claim ids to name in the two id fields, so the fields collapse to `claims` — every Claim you submit is new. Run the gates yourself before you consider a page done; upstream refuses to advance the queue until all of them pass:
 
