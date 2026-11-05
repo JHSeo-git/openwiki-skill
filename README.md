@@ -10,7 +10,7 @@
 
 </div>
 
-Write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.7.3 for coding agents like Claude Code and Codex.
+Write, maintain, and answer from OpenWiki wikis — repository documentation in `openwiki/` and a personal knowledge wiki in `~/.openwiki/wiki` — a port of [langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) v0.9.0 for coding agents like Claude Code and Codex.
 
 The upstream CLI drives an LLM through provider APIs. This port drops that plumbing: your coding agent already *is* the LLM, with filesystem and git tools attached, so it executes the same workflow directly — the upstream system prompts are reproduced verbatim inside the skills, with harness differences marked `[adapted]`. No API key, no runtime, no configuration.
 
@@ -51,7 +51,7 @@ The first run initializes `openwiki/`: a `quickstart.md` entrypoint with a task-
 ## Use
 
 - "Update the wiki" → a planner scopes the work from the git range since the last documented commit plus any page whose cited evidence moved, then one worker per page revises it; no-ops cleanly (early git check + evidence preflight) when nothing relevant changed.
-- "Document only src/auth.ts" → a scoped update preserves unrelated page framing and architecture, revising requested coverage and affected links/navigation; quickstart is included only when requested or its routing changes. Required evidence/language repairs and deterministic finalization still apply.
+- "Document only src/auth.ts" → a scoped update preserves unrelated page framing and architecture, revising requested coverage and affected links/navigation; quickstart is included only when requested or its routing changes. A deliberately focused update can defer unrelated evidence repairs; the run stays interrupted until a later full update reconciles that debt. Language rewrites and deterministic finalization still apply.
 - "Migrate the wiki to OKF" → just run an update: every run starts by normalizing non-compliant pages (minimal `type`/`title` front matter flagged `openwiki_generated: true`, bodies untouched), then enriches the flagged pages it works on.
 - "Switch the wiki to Korean" → an update that queues every existing page for a rewrite in the new language (front matter titles/descriptions included, code identifiers untouched), localizes index headings, and persists the language so later runs keep writing in it.
 - "Fold our LangSmith traces into the wiki" → a repo update run following [`references/runtime-evidence.md`](skills/openwiki/references/runtime-evidence.md): anomaly-weighted trace sampling synthesized into a `runtime-behavior.md` page plus the code pages it concerns.
@@ -77,7 +77,7 @@ This is a read boundary: ignored paths are never read, scanned, or reproduced in
 
 ## Upstream
 
-The current sync targets upstream v0.7.3. Repository planning and page work explicitly locate source outside the wiki and bound submission correction loops to five evaluations per attempt. Unreadable baseline commits require full review, and repositories without commits never record Git error text as a checkpoint. Q&A can request recorded provenance with `includeProvenance: true` and preserves combining marks in retrieval anchors; recorded evidence is not a freshness or verification guarantee. Managed guidance points to the configured maintenance process without assuming automatic updates are active. Provider streaming, connector retries, native bridges, visualizer changes, and runtime dependency updates remain upstream-owned.
+The current sync targets upstream v0.9.0, including v0.8.0. Update planning gains bounded recent commit messages per readable page baseline as research hints; current source remains the evidence, and active `.openwikiignore` rules suppress message collection. Deliberately focused updates can defer unrelated stale evidence pages without clearing their sources or verification metadata: the run remains interrupted and retains its prior checkpoint until the debt is reconciled. Language rewrites remain mandatory. Shared-baseline checks are reused within a run. Native MCP response caps, Mistral provider support, and visualizer page-fragment routing remain upstream-owned.
 
 Upstream 0.6.0 can run native page workers in parallel. This port follows upstream's host-agent skill, which still processes one page at a time, with quickstart last. It does not implement the native worker pool, MCP server, or `openwiki link` registry. The personal-mode shell restriction is a skill rule here; unattended hosts should also disable shell tools. Existing CLI-only personal sources need a read-only connector.
 
