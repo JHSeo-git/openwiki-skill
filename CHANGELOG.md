@@ -1,12 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.9.0 (2026-11-08)
 
 - Upstream sync: bump pin `b290e69` → `b7027e3` (upstream v0.9.0, including v0.8.0); reviewed all 12 commits and 81 changed files, with runtime-only changes documented in UPSTREAM.md.
 - Add bounded per-baseline commit-message hints to update planning, suppressing history hints under active ignore rules and retaining current code as evidence (#1103; thanks @MohammedAlkindi).
 - Allow deliberately focused updates to defer unrelated evidence repairs while preserving page grounding, interrupted status, and the prior checkpoint; language rewrites remain mandatory (#1081; thanks @rstuhlmuller).
 - Reuse shared-baseline checks within a run and document native host-summary truncation without truncating this port’s preflight coverage (#1105/#1102; thanks @MohammedAlkindi).
-
 - Upstream sync: bump pin `27b3c76` → `b290e69` (upstream v0.7.3); reviewed all 29 commits and 70 changed files, with runtime-only changes documented in UPSTREAM.md.
 - Clarify source/wiki layout and Markdown plan paths (#1076; thanks @jrodeiro5), and cap submission correction loops at five evaluations per worker attempt (#1075; thanks @jrodeiro5).
 - Require full review for unreadable page baselines and omit unavailable HEAD instead of recording Git error text (#1045/#1044; thanks @naveecode).
