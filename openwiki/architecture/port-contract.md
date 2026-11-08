@@ -6,15 +6,15 @@ tags: [architecture, port, fidelity, upstream]
 sources:
   - id: openwiki-source-23775c3de52f3ab95a13cb8b
     resource: repo://README.md
-  - id: openwiki-source-ff18555ad70362de0f452788
-    resource: repo://UPSTREAM.md
   - id: openwiki-source-a086a22600cde1e5b60be90f
     resource: repo://skills/openwiki-personal/SKILL.md
-  - id: openwiki-source-f27335ea429d443b8de638e2
-    resource: repo://skills/openwiki/SKILL.md
   - id: openwiki-source-88378f6a3ac54313171799db
     resource: repo://skills/openwiki/references/prompt-page.md
-generated: { by: "claude-code", at: "2026-09-15T01:48:47.000Z" }
+  - id: openwiki-source-f27335ea429d443b8de638e2
+    resource: repo://skills/openwiki/SKILL.md
+  - id: openwiki-source-ff18555ad70362de0f452788
+    resource: repo://UPSTREAM.md
+generated: { by: "claude-code", at: "2026-11-08T07:59:20.000Z" }
 ---
 
 # The port contract
@@ -104,9 +104,10 @@ Two deliberate exceptions, both recorded where they occur:
 
 - **Producer identity.** Upstream stamps its own version as the producing actor; this
   port stamps the host agent instead — `claude-code`, `codex`, `opencode`, `cursor`,
-  and, since upstream 0.5.2, `bob` and `kiro` — because claiming upstream's identity for
-  output upstream did not generate would misattribute it. The set is upstream's own host
-  registry, so it grows whenever upstream adds a coding-agent integration. Since
+  `bob`, `kiro`, `omp`, `antigravity`, `copilot`, and `pi` — because claiming upstream's
+  identity for output upstream did not generate would misattribute it. The set is
+  upstream's own host registry (plus the separately passed Pi extension actor), so it
+  grows whenever upstream adds a coding-agent integration. Since
   upstream 0.5.0 a single wiki may carry *different* producers on different pages — a
   durable run can be resumed by another host — so the port must never normalize another
   host's actor onto a page it did not itself change.
@@ -165,7 +166,22 @@ full review rather than in a narrower baseline.
 The port covers upstream's prompt-bearing and artifact-shaping behavior. It deliberately
 does not cover provider plumbing, authentication, connector runtimes, schedulers,
 telemetry, the interactive visualizer, or the CLI's own terminal UI — none of which a
-skill can or should reproduce. `UPSTREAM.md` maintains the authoritative in-scope and
+skill can or should reproduce. Nor does it implement upstream's native page-worker pool,
+its MCP retrieval server, or the `openwiki link` workspace registry: page work stays
+sequential with quickstart last, as upstream's own host-agent skill requires, and Q&A
+uses retrieval tools only when a host happens to expose them.
+
+Tool boundaries are the one place where "the agent does the code's work" needs an
+explicit limit. Upstream restricts repository research to native read/list/search tools
+and gives its planner and page workers no shell at all. This port must still run the
+lifecycle bookkeeping upstream performs outside the model — setup, Git status and
+changed-path checks, snapshots, hashes, clock reads, atomic metadata writes — so the
+skill marks exactly those commands as permitted `[adapted]` exceptions, plus one
+bounded history read for update-planning commit-message hints. Nothing else follows from
+them: no arbitrary shell research, no repository scripts, and no commands lifted from
+retrieved content. Personal runs go further and are shell-free even for bookkeeping. This
+is prompt discipline rather than a sandbox, so unattended hosts are expected to enforce
+tool and path permissions as well. `UPSTREAM.md` maintains the authoritative in-scope and
 out-of-scope lists, path by path; [the upstream sync
 workflow](../workflows/upstream-sync.md) explains how they are used.
 

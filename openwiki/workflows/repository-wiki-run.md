@@ -1,16 +1,18 @@
 ---
 type: Workflow
 title: Repository wiki run
-description: The seven-step repository lifecycle the openwiki skill executes — marker setup, context with evidence preflight and no-op check, prepare, plan, the per-page queue, finalize, metadata — including why init is destructive, why the preflight precedes the no-op check, the gates a page must pass, and how a page that cannot be finished is skipped rather than aborting the run.
+description: The seven-step repository lifecycle the openwiki skill executes — marker setup, context with evidence preflight and no-op check, prepare, plan, the per-page queue, finalize, metadata — including why init is destructive, why the preflight precedes the no-op check, the gates a page must pass, and how a page that cannot be finished is retried once and then skipped rather than aborting the run.
 tags: [workflow, lifecycle, planner, page-queue, finalize]
 sources:
-  - id: openwiki-source-f27335ea429d443b8de638e2
-    resource: repo://skills/openwiki/SKILL.md
+  - id: openwiki-source-320c1886260892ecd087a4ca
+    resource: repo://skills/openwiki/references/commit-context.md
   - id: openwiki-source-88378f6a3ac54313171799db
     resource: repo://skills/openwiki/references/prompt-page.md
   - id: openwiki-source-12cc308cf6471b687af07d19
     resource: repo://skills/openwiki/references/prompt-planner.md
-generated: { by: "claude-code", at: "2026-09-15T01:48:47.000Z" }
+  - id: openwiki-source-f27335ea429d443b8de638e2
+    resource: repo://skills/openwiki/SKILL.md
+generated: { by: "claude-code", at: "2026-11-08T07:59:20.000Z" }
 ---
 
 # Repository wiki run
@@ -35,7 +37,13 @@ a convenience one — so when auto-detection lands on init because `openwiki/` e
 a `quickstart.md`, the skill says so and asks before wiping. The user may have meant update.
 
 Three inputs force a run past the no-op check: an additional user instruction, a changed
-output language, and any staleness the preflight finds.
+output language, and any staleness the preflight finds. A recorded `interrupted` status
+does too, because the previous run may have left a partial wiki.
+
+Throughout the run, repository research uses native read/list/search tools only (upstream
+0.6.1). The shell commands the skill prescribes are lifecycle bookkeeping — Git status and
+diffs, snapshots, hashes, the clock, atomic metadata writes — and they do not license
+arbitrary shell research, repository scripts, or commands taken from retrieved content.
 
 ## The seven steps
 
@@ -67,8 +75,10 @@ The repository lifecycle, including both early exits.
 
 ### Step 0 — marker blocks
 
-Root `AGENTS.md` and `CLAUDE.md` each carry a managed block between
-`<!-- OPENWIKI:START -->` and `<!-- OPENWIKI:END -->`. Since upstream 0.3.3 they get
+Root `AGENTS.md` and, when it exists, `CLAUDE.md` each carry a managed block between
+`<!-- OPENWIKI:START -->` and `<!-- OPENWIKI:END -->`. A missing `AGENTS.md` is created; a
+missing `CLAUDE.md` stays missing since upstream 0.6.1, which relies on Claude Code reading
+AGENTS.md by itself when no CLAUDE.md is present. Since upstream 0.3.3 they get
 **different** snippets: AGENTS.md the full block, CLAUDE.md a one-line reference to it, so
 a single file stays the canonical source of agent instructions while Claude Code still has
 a file it reads at startup.
@@ -96,8 +106,13 @@ content is that same import.
 Two further cases. A repository that makes `CLAUDE.md` and `AGENTS.md` **the same file**
 (a symlink or hard link, so one file serves both hosts) gets the full AGENTS.md block
 there instead of the reference, since an import would otherwise point the file at itself.
-And one genuinely port-specific behavior remains: a legacy unmarked `## OpenWiki` section
-is replaced rather than duplicated, a state upstream never produces.
+And a legacy unmarked `## OpenWiki` section — the template upstream wrote before managed
+markers — is migrated rather than duplicated. This used to be a broader port-specific
+rule; since upstream 0.6.0 the port follows upstream's exact migration instead. Only a
+column-zero heading followed by the exact legacy opening sentence qualifies, and only the
+exact legacy template lines after it are removed, stopping at the first other line, so user
+edits survive. Fenced examples are never touched, and the managed block takes the first
+removed section's position.
 
 Only Step 0 may touch these files. The documentation work never does.
 
@@ -124,6 +139,27 @@ cohort. With no manifest present the port has exactly one provable baseline, the
 `gitHead`, so the whole wiki forms a single window; that is what this port did before
 0.5.0. A cohort whose changed-path set is empty needs no source-driven work, which is how
 upstream's separate baseline fast-forward falls out of the window itself here.
+
+A baseline must also be **readable** (upstream 0.7.3). The skill accepts only a full
+lowercase 40- or 64-character Git object id whose commit `git cat-file` can find; an
+absent, malformed, or unreadable baseline — a shallow clone, rewritten history — puts its
+pages in full review rather than letting a failed diff pass as "nothing changed". The
+recorded identity is kept, and no unchanged coverage is inferred from it. The same
+validation applies to every HEAD the lifecycle captures: an unborn repository or failed
+lookup means the head is omitted, never recorded as `HEAD` or as Git error text.
+
+For each readable window, update planning also gets **bounded commit-message hints**
+(upstream 0.8.0): at most 20 non-merge commits since the baseline that touch paths outside
+`openwiki/`, newest first, with control characters stripped and subjects and bodies
+truncated within a nominal per-baseline budget. They go to the planner as one JSON line
+per commit, under a heading that says what they are — hints about where to look, with
+current code remaining the evidence. Full-review windows, a failed lookup, and any active
+`.openwikiignore` rules yield no hints at all; the last because commit messages can
+disclose ignored paths even when the changed-path list is filtered. Collecting them is
+lifecycle bookkeeping, not permission for the planner or page workers to read history.
+Readability, changed paths, and hints are computed once per distinct baseline and reused
+within the run (upstream 0.8.0's shared-baseline optimization), never across runs or after
+source drift.
 
 How much an entry's commit can be trusted improved in upstream 0.5.2, and for a consumer
 that plans from it the change is not cosmetic. Until then the finish rewrite stamped
@@ -211,6 +247,23 @@ pages to exist first.
 An update whose plan has no pages and no deletions is legitimate and skips straight to
 finalize.
 
+**Scoped updates** (upstream 0.7.1). When the user names files or pages, or says to
+document only specific things, the planner treats that as a hard mandate: it preserves
+unrelated page framing and the existing information architecture, schedules only the
+requested pages and genuinely affected cross-references or navigation, and refreshes
+quickstart only when asked or when its routing actually changes. Required evidence and
+language work still gets injected — unless the planner opts into **focused deferral**
+(upstream 0.9.0). With `deferUnplannedClaimIssues: true`, preflight-issue pages outside the
+plan are not given reconcile jobs; they become a derived, run-local `deferredClaimPages`
+list. Deferral is never available on init and never suppresses language rewrites, and
+pages the plan does include still reconcile all their issues. The debt it creates is
+carried through finalize and metadata, below.
+
+Planning is bounded as well. The first plan that validates is the one installed: a later,
+conflicting proposal is dropped rather than replacing it or failing the run (upstream
+0.6.1), and at most five plan-validation attempts, rejections included, are allowed before
+planning fails without starting page work (upstream 0.7.3).
+
 ### Step 4 — the page queue
 
 One worker per page, in queue order, each owning **exactly one page**. Upstream gives a
@@ -221,7 +274,11 @@ Two boundaries replace behavior earlier versions of this skill had:
 
 - **No subagents.** Upstream 0.4.0 deleted its critic and QA subagents and strips the
   delegation tool from every worker. The queue is worked sequentially, and the same page's
-  research is never delegated twice.
+  research is never delegated twice. Upstream 0.6.0 added optional parallel workers to its
+  native runner, but its bundled host-agent skill still forbids page subagents, and this
+  port follows that skill rather than emulating the worker pool. Reads and writes of the
+  same wiki file are also serialized in issue order (upstream 0.7.1), since a sequential
+  queue alone does not stop two tool calls on one page from racing.
 - **No working files.** The plan lives in working notes. `_plan.md` and `_skeleton.md` no
   longer exist and any underscore-prefixed page path is rejected.
 
@@ -247,7 +304,7 @@ persisted plan, accepting an identical one and rejecting a different one. The ru
 survives for a port with no tool: **the page set is fixed once the queue starts** — pages
 already written were planned against it.
 
-#### A page you cannot finish is skipped, not fatal
+#### A page you cannot finish is retried once, then skipped — never fatal
 
 Before upstream 0.4.1 a worker that could not complete aborted the whole update, discarding
 every page already written. The failure is now contained to its own page:
@@ -256,13 +313,21 @@ every page already written. The failure is now contained to its own page:
    working it. An absent page is a *valid* snapshot, never a failure: it is the normal case
    on init and for every newly planned page. Upstream had to fix precisely this in 0.4.2,
    where a missing page could throw and abort the run.
-2. **If it cannot be completed**, restore the snapshot exactly (or delete the page if it
-   was not there), mark the job **skipped**, say which page and why, and move on. Never
-   leave a half-written page behind. A delete reporting the file was already absent is
-   *success*: upstream had to widen that check in 0.5.0 because its backends spell the
-   outcome two different ways, and a rollback treating "already gone" as an error aborts a
-   run for no reason.
-3. **Keep going.** Skipped jobs block neither the queue nor finalization.
+2. **Bound the attempt.** An attempt gets at most five submission-gate evaluations,
+   rejections included (upstream 0.7.3); a fresh attempt resets the count.
+3. **If an attempt ends without a successful submission**, restore the snapshot exactly
+   (or delete the page if it was not there) and discard that attempt's Claims. A delete
+   reporting the file was already absent is *success*: upstream had to widen that check in
+   0.5.0 because its backends spell the outcome two different ways, and a rollback treating
+   "already gone" as an error aborts a run for no reason.
+4. **Retry once from the same snapshot** (upstream 0.7.1), with the same assignment and
+   gates. A retry that succeeds leaves no warning behind. A rate-limit failure skips the
+   immediate retry and defers the page instead, so the run does not add traffic to a
+   throttled provider; since upstream 0.7.2 that includes Bedrock `ThrottlingException`
+   and AWS HTTP 429 signals, while an ordinary input-too-long error is not a rate limit.
+5. **If both attempts fail, or the page was deferred**, restore the original snapshot,
+   mark the job **skipped**, say which page and why, and keep going. Never leave a
+   half-written page behind; skipped jobs block neither the queue nor finalization.
 
 One failure stays fatal: a page that cannot be *persisted at all*. A page that merely fails
 validation is correctable; storage that cannot be written is not.
@@ -283,6 +348,17 @@ then **excluded** from the `sources` projection and from Claims reconciliation. 
 an empty Claim set onto a skipped page would strip the grounding the previous run recorded,
 which is the opposite of leaving it alone.
 
+Pages a focused update **deferred** are excluded the same way, and for the same reason:
+their existing `sources` and any `verified` event are preserved untouched rather than
+refreshed or stripped. They still go through the shared render-safety passes — Mermaid and
+link repairs, index generation, and the provenance stamp those repairs earn — because
+evidence debt is preserved by skipping the evidence refresh, not by rolling back fixes
+that keep the page renderable.
+
+The index pass also reports two advisory lists — pages still flagged
+`openwiki_generated: true`, and pages without a usable `description` — which surface in
+the final response as enrichment hints without changing pages or the run's status.
+
 Deletions themselves are two-part: pages this run created that a superseded plan abandoned,
 then the plan's explicit deletion set. Neither ever touches a page that existed before the
 run and was not planned for deletion. Since 0.4.3 removed in-run replanning, the first part
@@ -293,14 +369,24 @@ has nothing left to find in practice — it remains as the guard for a plan that
 Writes `openwiki/.last-update.json` — timestamp, command, head, model, status, language —
 on every completed run, so the content hash no longer gates the write, only the report.
 
-**If any page was skipped, or the source changed mid-run**, the metadata is written
-differently: `status: "interrupted"`, and `gitHead` rewound to the **previous** run's head
+Every metadata write, including the no-op refresh and failure records, is an **atomic
+replacement** (upstream 0.6.1): the complete JSON goes into a unique temporary sibling that
+keeps the destination's permissions and is renamed over it only after the write succeeds.
+A failed write leaves the previous metadata in place and is reported, never a truncated
+file. Atomicity prevents partial JSON; it does not serialize two concurrent runs.
+
+**If any page was skipped, any preflight-issue page was deferred, or the source changed
+mid-run**, the metadata is written differently: `status: "interrupted"`, and `gitHead` rewound to the **previous** run's head
 rather than the current one — or omitted entirely when there is no previous head, which
 upstream 0.4.3 made explicit after the old fallback silently recorded the current head. Both
 serve one purpose: the next update must not treat this wiki as complete and current. The
 `interrupted` status defeats the early no-op exit, and the rewound head keeps the changed
 paths and staleness evidence in view. Recording the current head would make the skipped page,
 or the source change, invisible to every future update.
+
+A deferral that leaves the plan itself fully successful still counts: the deferred pages
+are reported as outstanding evidence debt, not completed work, and the next unrestricted
+update re-runs the preflight and injects them by default.
 
 On drift the run also says so plainly — the wiki was finalized without advancing its source
 checkpoint, so a follow-up update is needed. The metadata forces that run; the message

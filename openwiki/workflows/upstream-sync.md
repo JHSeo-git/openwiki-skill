@@ -6,15 +6,17 @@ tags: [workflow, upstream, sync, maintenance, scope]
 sources:
   - id: openwiki-source-ca6cb4b1a14fd7969dfae3ec
     resource: repo://CHANGELOG.md
-  - id: openwiki-source-ff18555ad70362de0f452788
-    resource: repo://UPSTREAM.md
+  - id: openwiki-source-23775c3de52f3ab95a13cb8b
+    resource: repo://README.md
   - id: openwiki-source-81a083d8da524a444920e56a
     resource: repo://skills/openwiki-personal/references/index-labels.md
   - id: openwiki-source-49c93d14fd35f8676941fc9c
     resource: repo://skills/openwiki/references/index-labels.md
   - id: openwiki-source-88378f6a3ac54313171799db
     resource: repo://skills/openwiki/references/prompt-page.md
-generated: { by: "claude-code", at: "2026-09-15T01:48:47.000Z" }
+  - id: openwiki-source-ff18555ad70362de0f452788
+    resource: repo://UPSTREAM.md
+generated: { by: "claude-code", at: "2026-11-08T07:59:20.000Z" }
 ---
 
 # Upstream sync
@@ -42,7 +44,16 @@ applies:
 Out of scope, and stated as such so an absence never reads as an oversight: authentication,
 connector runtimes, schedulers, credentials and onboarding, the CLI's own command plumbing
 and terminal UI, the interactive visualizer, telemetry, provider and transport
-configuration, and the host installer.
+configuration, the host installer, and the MCP session plumbing behind upstream's
+retrieval tools. The retrieval-tool *contract* is mapped, because `openwiki-ask` uses it
+when a host exposes it; the server that implements it is not.
+
+Since the 0.7.x syncs, each release also gets its own section at the top of `UPSTREAM.md`:
+how many commits and changed paths were reviewed, which source paths were added, a table
+of upstream change → port decision, a "verified unchanged" list, and an out-of-scope list
+for that release. Those sections explicitly supersede the long-lived mapping table below
+them, so the newest decisions are read first and the historical rows stay intact for
+context.
 
 ## The procedure
 
@@ -63,13 +74,19 @@ The steps in words:
 
 1. **Refresh a local upstream clone.** Unshallow it first if needed.
 2. **List relevant changes** with a path-scoped `git log` from the pin to the new tag.
+   The path list now spans the prompt and lifecycle sources plus `src/claims/`,
+   `src/generation/`, `src/retrieval/`, `src/linking/`, the Pi integration, the
+   integration core, the installer's actor registry and atomic-file helper, the MCP
+   server instructions, the bundled skills, and `examples/`.
 3. **No output → the skills are current; stop.** Output → review each commit's diff and
    port it per the mapping. Also list the tag's source tree and compare it against the
    mapping, and read the unscoped log as well — the scoped one is only as complete as its
    path list.
 4. **Apply prompt changes as diffs**, keeping `[adapted]` and `[omitted]` markers intact.
 5. **Verify the deliberately duplicated files still match.**
-6. **Move the pin and write the changelog entry.**
+6. **Move the pin and write the changelog entry.** Releases track upstream versions in
+   lockstep, so the repository's own release is numbered after the upstream release it
+   syncs to.
 
 ## Guards, each earned by a real failure
 
@@ -110,7 +127,8 @@ the command has to agree.
 
 **Re-check every `[adapted]` note against the new release.** An adaptation is a claim about
 upstream, and upstream can adopt it: 0.5.1 took this port's rule for a `CLAUDE.md` that only
-imports AGENTS.md, and 0.5.2 took its rule for evidence resolving through a symlink. Once
+imports AGENTS.md, 0.5.2 took its rule for evidence resolving through a symlink, and 0.6.0
+shipped an exact legacy-section migration that replaced the port's broader one. Once
 that happens the note is *wrong* rather than stale, because it asserts a divergence that no
 longer exists — and the two adoptions came in consecutive releases, so this is a routine
 outcome rather than a curiosity. Check adaptations in the areas a release touched, and
@@ -126,7 +144,12 @@ where upstream's version is narrower than the port's, prefer upstream's.
   file, or exclusion-list entry must disappear everywhere, including permission allowlists
   and reference-file cross-links.
 - The changelog entry names both what was ported and what was deliberately skipped, with
-  upstream PR numbers, so a later reader can tell a decision from an omission.
+  upstream PR numbers as bare references, so a later reader can tell a decision from an
+  omission. Its opening bullet records the pin movement and how much of the release was
+  reviewed, and the runtime-only changes it leaves out are listed in `UPSTREAM.md`.
+- Next-sync notes in `UPSTREAM.md` name the release tag they were written against. A note
+  is a claim about one tag, not about upstream `main`, so a sync that moves the pin should
+  re-read the note and update or retire it.
 
 ## When faithfulness and quality disagree
 

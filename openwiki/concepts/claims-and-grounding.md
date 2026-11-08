@@ -4,13 +4,17 @@ title: Claims and grounding
 description: The grounded-Claims contract a repository page must satisfy — what counts as a material Claim, the repo:// evidence grammar, how a page's complete Claim set is reconciled on update — and exactly which parts of upstream's Claims persistence this port reproduces, adapts, or omits.
 tags: [claims, grounding, evidence, okf, fidelity]
 sources:
-  - id: openwiki-source-ff18555ad70362de0f452788
-    resource: repo://UPSTREAM.md
-  - id: openwiki-source-f27335ea429d443b8de638e2
-    resource: repo://skills/openwiki/SKILL.md
+  - id: openwiki-source-74dde326f83cd798bb00642b
+    resource: repo://skills/openwiki-ask/SKILL.md
+  - id: openwiki-source-320c1886260892ecd087a4ca
+    resource: repo://skills/openwiki/references/commit-context.md
   - id: openwiki-source-88378f6a3ac54313171799db
     resource: repo://skills/openwiki/references/prompt-page.md
-generated: { by: "claude-code", at: "2026-09-15T01:48:47.000Z" }
+  - id: openwiki-source-f27335ea429d443b8de638e2
+    resource: repo://skills/openwiki/SKILL.md
+  - id: openwiki-source-ff18555ad70362de0f452788
+    resource: repo://UPSTREAM.md
+generated: { by: "claude-code", at: "2026-11-08T07:59:20.000Z" }
 ---
 
 # Claims and grounding
@@ -65,6 +69,18 @@ Bounded spans are preferred where the span genuinely is the evidence; a whole-fi
 resource is correct when the whole file is. For a prose-and-Markdown repository like this
 one, whole-file resources are usually the honest choice, since a rule's meaning does not
 live in a line range that shifts on every edit.
+
+A span that is kept must stay current. Since upstream 0.6.1 the resolver rewrites a
+relocated range to its present `#Lx-Ly` even when the content version is unchanged. The
+port has no relocation tokens to do that mechanically, so a worker rechecking a range
+locates the supporting text in current source and records the span it actually observed —
+never the old line numbers just because the proposition still holds, and never a guessed
+relocation when the text cannot be found.
+
+Evidence means current repository source, and nothing else qualifies. Since upstream 0.8.0
+update planning receives bounded recent commit messages per baseline, but those are hints
+about where to look: a proposition a message suggests becomes a Claim only once the code
+supports it.
 
 ## Reconciliation on update
 
@@ -176,6 +192,13 @@ front matter. The finalize step projects every Claim's evidence, reduced to whol
 form, into `sources` with deterministic OpenWiki-owned ids, retaining any entry another
 producer authored. See [the OKF output contract](okf-output.md) for the field's shape.
 
+That record is also what readers get back. Since upstream 0.7.3 a retrieval read can ask
+for recorded provenance (`includeProvenance: true`), returning a page's `sources` and,
+where a sidecar exists, its Claim evidence and stored versions. The `openwiki-ask` skill
+documents the flag with the same caveat upstream gives it: recorded evidence is not a
+freshness, existence, or semantic-verification guarantee, and the Markdown fallback reports
+the existing `sources` without inventing Claim ids or versions it does not have.
+
 **How much of sparse reconciliation is actually live here.** No sidecar means no persisted
 Claim ids, so the id-keyed machinery has nothing to name: `confirmedClaimIds`,
 `retractedClaimIds`, and `inspect_claims` have no targets, every submission is effectively
@@ -221,6 +244,18 @@ of sidecars:
   adaptation, and the boundary between the two halves is worth keeping straight: one is
   now shared with upstream, the other is still this port's own call.
 
+Two refinements decide *which* changes count. Each page is checked against its own
+committed baseline where a native page manifest records one, and since upstream 0.7.3 a
+baseline must be a full lowercase Git object id whose commit is actually readable — a
+missing, malformed, or unreadable baseline (a shallow clone, rewritten history) puts its
+pages in full review rather than letting a failed diff masquerade as "nothing changed".
+And since upstream 0.9.0 a deliberately focused update may **defer** issue pages it does
+not plan, instead of having a reconcile job injected for each. Deferral postpones the
+debt; it does not forgive it. A deferred page keeps its existing `sources` (and any
+`verified` event) untouched, is excluded from Claims and source projection, and forces
+the run's metadata to `interrupted` with the previous baseline retained, so the next
+unrestricted update re-runs the preflight and picks the page up again.
+
 The fidelity gap is stated plainly in the skill and worth repeating: this is **per page
 and per file**, where upstream is **per Claim and content-versioned**. It cannot
 distinguish a line range that merely moved from one that was rewritten, it never surfaces
@@ -234,7 +269,8 @@ direction for a staleness check.
   submission gate, and only the finalize step turns them into front matter.
 - `openwiki/.claims`, the `verified` field, and `openwiki/.page-manifest.json` are never
   authored by this port — not even as placeholders. The manifest may be *read*; it may
-  never be written, deleted, or repaired.
+  never be written, deleted, or repaired. An existing `verified` event on a deferred page
+  is preserved as found, neither removed nor restamped.
 - A page's submission gate **repairs before it judges** (upstream 0.4.1): recognized
   invalid OKF metadata is repaired or removed deterministically first, and the gate fails
   only on what no repair can fix — a missing or unreadable page, a shape that cannot be

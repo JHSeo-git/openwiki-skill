@@ -4,25 +4,29 @@ title: openwiki-skill quickstart
 description: Entry point for the openwiki-skill repository wiki — what this prompt-only port of langchain-ai/openwiki is, a task-routing map from intent to the page and files that own it, and the invariants any change must preserve.
 tags: [quickstart, openwiki, skills, port, routing]
 sources:
-  - id: openwiki-source-23775c3de52f3ab95a13cb8b
-    resource: repo://README.md
-  - id: openwiki-source-ff18555ad70362de0f452788
-    resource: repo://UPSTREAM.md
   - id: openwiki-source-d781a3f9949210939d21e676
     resource: repo://docs/superpowers/plans/2026-07-10-openwiki-0.1.0-port.md
   - id: openwiki-source-dbd023210529f29ad3d88c02
     resource: repo://docs/superpowers/specs/2026-07-07-openwiki-skill-design.md
+  - id: openwiki-source-23775c3de52f3ab95a13cb8b
+    resource: repo://README.md
+  - id: openwiki-source-74dde326f83cd798bb00642b
+    resource: repo://skills/openwiki-ask/SKILL.md
   - id: openwiki-source-a086a22600cde1e5b60be90f
     resource: repo://skills/openwiki-personal/SKILL.md
+  - id: openwiki-source-320c1886260892ecd087a4ca
+    resource: repo://skills/openwiki/references/commit-context.md
   - id: openwiki-source-f27335ea429d443b8de638e2
     resource: repo://skills/openwiki/SKILL.md
-generated: { by: "claude-code", at: "2026-09-15T01:48:47.000Z" }
+  - id: openwiki-source-ff18555ad70362de0f452788
+    resource: repo://UPSTREAM.md
+generated: { by: "claude-code", at: "2026-11-08T07:59:20.000Z" }
 ---
 
 # openwiki-skill quickstart
 
 Agent skills that write, maintain, and answer from OpenWiki wikis — a port of
-[langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) **v0.5.2** for coding
+[langchain-ai/openwiki](https://github.com/langchain-ai/openwiki) **v0.9.0** for coding
 agents such as Claude Code and Codex.
 
 Upstream is a CLI that drives a model through provider APIs. This repository drops that
@@ -41,7 +45,8 @@ criterion.
 |---|---|---|
 | Understand what "port" means and what may be edited | [The port contract](architecture/port-contract.md) | `UPSTREAM.md`, every `skills/*/SKILL.md` |
 | Find which skill does what, or add a skill | [Skill catalog and boundaries](architecture/skill-catalog.md) | `skills/` |
-| Change how a repository wiki is generated | [Repository wiki run](workflows/repository-wiki-run.md) | `skills/openwiki/SKILL.md`, `skills/openwiki/references/prompt-planner.md`, `prompt-page.md` |
+| Change how a repository wiki is generated | [Repository wiki run](workflows/repository-wiki-run.md) | `skills/openwiki/SKILL.md`, `skills/openwiki/references/prompt-planner.md`, `prompt-page.md`, `commit-context.md` |
+| Change how questions are answered from a wiki (retrieval tools, linked workspaces, provenance reads) | [Skill catalog and boundaries](architecture/skill-catalog.md) | `skills/openwiki-ask/SKILL.md` |
 | Change how the personal wiki is built or ingested | [Personal wiki run](workflows/personal-wiki-run.md) | `skills/openwiki-personal/SKILL.md`, `references/sources.md`, `references/connectors.md` |
 | Port a new upstream release | [Upstream sync](workflows/upstream-sync.md) | `UPSTREAM.md`, `CHANGELOG.md` |
 | Change front matter, indexes, diagrams, or link validation | [OKF output contract](concepts/okf-output.md) | both `SKILL.md` finalize steps, `skills/mermaid-diagrams/SKILL.md` |
@@ -60,17 +65,19 @@ planner fixes the page set; one worker writes each page and records Claims again
 **Personal wiki** (`openwiki-personal`) — five steps: context, prepare, one monolithic
 authoring prompt, finalize, metadata. This is the only mode still on upstream's shared
 agent, and the only one that still runs a whole-wiki translation pass. Its init is not
-destructive.
+destructive, and its runs are shell-free end to end, bookkeeping included.
 
 Both produce the same artifact shape: OKF v0.2 concept pages, deterministic per-directory
 indexes, code-owned `generated` provenance, self-correcting Mermaid and link validation.
 
 Two properties of the repository lifecycle are easy to miss and shape how updates behave:
 
-- **A partial run is a result, not a loss.** A page that cannot be finished is skipped
-  rather than aborting the run, and the metadata then records `status: "interrupted"` with
-  the last fully documented commit — so the finished pages are committable and the next run
-  knows to come back. Since upstream 0.5.0 the CI templates publish that partial output
+- **A partial run is a result, not a loss.** A page that cannot be finished is retried
+  once from its snapshot and then skipped rather than aborting the run, and the metadata
+  then records `status: "interrupted"` with the last fully documented commit — so the
+  finished pages are committable and the next run knows to come back. A focused update
+  that deliberately defers unrelated evidence repairs ends the same way, so that debt
+  cannot be mistaken for a complete wiki. Since upstream 0.5.0 the CI templates publish that partial output
   deliberately, expecting it to be merged as the next run's starting point. This is also
   why an auto-merging template must gate on that recorded status rather than on the job's
   exit code, which is zero for a partial run — see [Automation](operations/automation.md).
@@ -89,7 +96,7 @@ Five rules govern every change here. Each is expanded in
 2. **A behavior change needs a marker.** New behavior upstream lacks, or dropped behavior it
    has, without an `[adapted]` or `[omitted]` note is indistinguishable from drift.
 3. **An `[adapted]` note expires.** Upstream sometimes adopts this port's deviation — it
-   happened in 0.5.1 and again in 0.5.2 — and the note then asserts a divergence that no
+   happened in 0.5.1, 0.5.2, and again in 0.6.0 — and the note then asserts a divergence that no
    longer exists, which makes it wrong rather than merely stale. Re-check adaptations in
    whatever areas a release touched.
 4. **Deterministic passes stay deterministic.** Write only when content differs. That is what

@@ -8,13 +8,13 @@ sources:
     resource: repo://AGENTS.md
   - id: openwiki-source-fd626eae0b002efe8017b3f9
     resource: repo://skills/openwiki-personal/references/connectors.md
-  - id: openwiki-source-f27335ea429d443b8de638e2
-    resource: repo://skills/openwiki/SKILL.md
   - id: openwiki-source-ab21965a60a0ce53d1842e88
     resource: repo://skills/openwiki/references/automation.md
   - id: openwiki-source-11012093e98a6994fe87df7b
     resource: repo://skills/openwiki/references/runtime-evidence.md
-generated: { by: "claude-code", at: "2026-09-15T01:48:47.000Z" }
+  - id: openwiki-source-f27335ea429d443b8de638e2
+    resource: repo://skills/openwiki/SKILL.md
+generated: { by: "claude-code", at: "2026-11-08T07:59:20.000Z" }
 ---
 
 # Keeping wikis fresh automatically
@@ -44,7 +44,7 @@ exactly, which is why it is the recommended route.
   set-and-forget.
 
 Codex runs the same update through `codex exec`. The run needs read-only git plus writes
-under `openwiki/`, `AGENTS.md`, and `CLAUDE.md` — nothing more.
+under `openwiki/`, `AGENTS.md`, and an existing `CLAUDE.md` — nothing more.
 
 Phrase the scheduled prompt so a no-op stays a no-op: *"…update this repository's wiki. If
 it reports the wiki is already current, change nothing."* The lifecycle already detects
@@ -63,7 +63,10 @@ last-documented commit, so the update cannot compute what changed and runs again
 This is the failure mode most likely to look like "the wiki just stopped updating".
 
 The templates also clone the skills into the workspace and scope the commit to `openwiki/`
-plus the root instruction files, so the skills clone is never committed.
+plus the root instruction files, so the skills clone is never committed. Because setup no
+longer creates a missing `CLAUDE.md` (upstream 0.6.1), every template stages it only when
+it exists — otherwise a repository without one would fail the staging step and lose the
+whole update. The GitHub templates also annotate the run with the created PR's URL.
 
 ### A failed run still opens the pull request
 
@@ -126,15 +129,27 @@ file is exactly what an unattended job must not do.
 Headless runs should use a scoped allowlist rather than skipping permissions wholesale.
 The shape, in the **target repository's** `.claude/settings.json`:
 
-- Read-only git: `status`, `rev-parse`, `log`, `diff`, `show`, `blame` — all `--no-pager`.
-- Discovery and hashing: `rg`, `find`, `shasum` / `sha256sum`, `date`.
+- Read-only git for lifecycle bookkeeping: `status`, `rev-parse`, `diff`, `ls-files` —
+  all `--no-pager`.
+- Snapshot and hashing: `find openwiki`, `shasum` / `sha256sum`, `date`.
 - Text helpers the deterministic steps need: `head`, `sed`, `cut` — these cover the
   body-hash extraction and the `sources` id derivation.
-- Writes confined to `openwiki/**` plus `AGENTS.md` and `CLAUDE.md`.
+- Writes confined to `openwiki/**` plus `AGENTS.md` and an existing `CLAUDE.md`.
 
 Everything else stays denied. Read, glob, and grep are already read-only; the skill's own
 security rules forbid reading `.env` files and secret material regardless of what the
 allowlist permits.
+
+The list is narrower than it once was, and deliberately so. Since upstream 0.6.1,
+repository research goes through native read/list/search tools even when no ignore rules
+are active, so the allowlist no longer carries `rg`, an unscoped `find`, or history
+readers such as `show` and `blame`; its Bash entries exist only for the bookkeeping steps.
+Two limits deserve stating because the allowlist cannot express them. A command-prefix
+permission does not confine arguments or paths, so the host sandbox has to do that. And
+generic write permission does not prove the metadata write is atomic: Step 6 needs a
+native atomic replacement, or a narrowly scoped write-then-rename of `.last-update.json`
+through a unique temporary sibling, and that capability should be verified before a
+schedule is trusted.
 
 ### The one capability to withhold
 
@@ -155,14 +170,23 @@ run stays small. That mirrors upstream, which runs one source-specific update pe
 connector rather than one sweep.
 
 Permissions go in the user-level settings rather than a repository's, since these runs are
-not repo-rooted: writes under `~/.openwiki/**`, the read-only commands above, and whatever
-read-only MCP tools the sources need.
+not repo-rooted — and they look nothing like the repository allowlist. Personal runs have
+been **shell-free** since upstream 0.6.0, bookkeeping included, because they consume
+untrusted connector content and often run unattended. So the host should disable shell,
+terminal, and subprocess tools for these runs and grant only native Read/Glob/Grep and
+Write/Edit within `~/.openwiki/wiki`, read access to the `~/.openwiki/INSTRUCTIONS.md`
+brief, a native clock, and the read-only MCP or source tools that run needs. Do not reuse
+the repository Bash allowlist. The scheduler's own launch command and log redirection sit
+outside the agent's tools, so its log directory is created once, by hand. A source that is
+reachable only through a CLI must first be exposed through a read-only connector.
 
-Credentials for sources live in `~/.openwiki/.env` — the same file the upstream CLI treats
-as its credential source of truth, so both tools share one place. The operational rule is
-absolute: **the agent never reads that file.** It is loaded inside a single command
-invocation so values never reach the output or the transcript, and credentials are referred
-to by variable name only.
+Authentication belongs to the connected tools, not to the agent. The native CLI keeps its
+own credential configuration (including `~/.openwiki/.env`), and MCP servers may keep
+theirs. The operational rule is absolute: **the agent never reads, sources, writes, or
+prints credential files** — not even through a shell for a read-only call. When a
+connector is not authenticated, the run reports which one needs setup instead of asking
+for the secret or improvising another route, and credentials are referred to by variable
+name only.
 
 ## Runtime evidence runs
 
@@ -181,6 +205,8 @@ signatures, counts, and trace URLs but **never raw run inputs or outputs**.
 
 Worth noting for anyone reading this wiki: `openwiki-skill` ships no
 `.github/workflows/`, so its own wiki has no scheduled refresh and is updated by an
-explicit run. Its `AGENTS.md` marker block mentions a scheduled workflow because that block
-is upstream's verbatim text, managed by the skill's own Step 0 — not a claim about this
-repository's CI.
+explicit run. Its `AGENTS.md` marker block is upstream's verbatim text, managed by the
+skill's own Step 0, and since upstream 0.7.3 it no longer asserts that a scheduled
+workflow exists: it points readers to "the repository's documented maintenance process"
+and tells them to check its configuration and completed runs before relying on automatic
+updates. For this repository, that process is a manual update run.

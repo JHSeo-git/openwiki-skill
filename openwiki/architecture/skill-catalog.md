@@ -6,25 +6,27 @@ tags: [architecture, skills, boundaries, routing]
 sources:
   - id: openwiki-source-23775c3de52f3ab95a13cb8b
     resource: repo://README.md
-  - id: openwiki-source-ff18555ad70362de0f452788
-    resource: repo://UPSTREAM.md
   - id: openwiki-source-0b5fb88ef5740ec3069d4d5d
     resource: repo://skills/mermaid-diagrams/SKILL.md
   - id: openwiki-source-74dde326f83cd798bb00642b
     resource: repo://skills/openwiki-ask/SKILL.md
-  - id: openwiki-source-a086a22600cde1e5b60be90f
-    resource: repo://skills/openwiki-personal/SKILL.md
   - id: openwiki-source-81a083d8da524a444920e56a
     resource: repo://skills/openwiki-personal/references/index-labels.md
-  - id: openwiki-source-f27335ea429d443b8de638e2
-    resource: repo://skills/openwiki/SKILL.md
+  - id: openwiki-source-a086a22600cde1e5b60be90f
+    resource: repo://skills/openwiki-personal/SKILL.md
+  - id: openwiki-source-320c1886260892ecd087a4ca
+    resource: repo://skills/openwiki/references/commit-context.md
   - id: openwiki-source-49c93d14fd35f8676941fc9c
     resource: repo://skills/openwiki/references/index-labels.md
   - id: openwiki-source-88378f6a3ac54313171799db
     resource: repo://skills/openwiki/references/prompt-page.md
   - id: openwiki-source-12cc308cf6471b687af07d19
     resource: repo://skills/openwiki/references/prompt-planner.md
-generated: { by: "claude-code", at: "2026-09-15T01:48:47.000Z" }
+  - id: openwiki-source-f27335ea429d443b8de638e2
+    resource: repo://skills/openwiki/SKILL.md
+  - id: openwiki-source-ff18555ad70362de0f452788
+    resource: repo://UPSTREAM.md
+generated: { by: "claude-code", at: "2026-11-08T07:59:20.000Z" }
 ---
 
 # Skill catalog and boundaries
@@ -36,7 +38,7 @@ condition.
 
 | Skill | Upstream counterpart | Job | Writes |
 |---|---|---|---|
-| `openwiki` | code mode (`--init` / `--update`) | Generate or refresh a repository's `openwiki/` wiki | `openwiki/**`, plus root `AGENTS.md` / `CLAUDE.md` marker blocks |
+| `openwiki` | code mode (`--init` / `--update`) | Generate or refresh a repository's `openwiki/` wiki | `openwiki/**`, plus the root `AGENTS.md` marker block and an existing `CLAUDE.md` |
 | `openwiki-personal` | personal mode (local-wiki) | Build or refresh the local knowledge wiki | `~/.openwiki/wiki/**`, plus the wiki brief on first init |
 | `openwiki-ask` | chat mode | Answer questions from either wiki | Nothing |
 | `mermaid-diagrams` | upstream's bundled skill | Diagram-type choice and Mermaid syntax safety | Nothing directly |
@@ -54,7 +56,8 @@ overlaps:
 
 - `openwiki` writes only under the target repository's `openwiki/` directory, and only
   its own Step 0 may touch root `AGENTS.md` / `CLAUDE.md`. The documentation work itself
-  never touches them. Two files *inside* that directory are carved out as read-only
+  never touches them. Step 0 creates a missing `AGENTS.md` but, since upstream 0.6.1,
+  refreshes `CLAUDE.md` only when it already exists — a missing one stays missing. Two files *inside* that directory are carved out as read-only
   because the native CLI owns them — `openwiki/.run.json` and, since upstream 0.5.0,
   `openwiki/.page-manifest.json`. The write boundary is therefore narrower than the
   directory: everything under `openwiki/` except those two.
@@ -63,6 +66,11 @@ overlaps:
   supplies the goal.
 - `openwiki-ask` writes nothing. A question that turns out to need a wiki change is
   routed back to whichever writing skill owns that wiki, rather than answered by editing.
+  Its reads are bounded too: it does not preload wikis at task start, uses upstream's
+  optional MCP retrieval tools (`openwiki_search` / `openwiki_read`, with linked-workspace
+  selection) only when a host exposes them, and otherwise reads the selected wiki's
+  Markdown directly. It never emulates the `openwiki link` registry, and personal-wiki
+  questions stay inside the same shell-free boundary as personal runs.
 
 `mermaid-diagrams` is the odd one out: it is consulted by the other two writing skills
 rather than invoked on its own, which is exactly how upstream bundles it. It holds the
@@ -102,6 +110,7 @@ run executes inline.**
 |---|---|
 | `prompt-planner.md` | Every repository run, at the planning step |
 | `prompt-page.md` | Every repository run, once per planned page |
+| `commit-context.md` | Update runs with a readable baseline and no active `.openwikiignore` rules, to collect bounded commit-message hints for the planner |
 | `index-labels.md` | Only when the wiki's language is not English |
 | `automation.md` | Only when the user asks about scheduling or CI |
 | `runtime-evidence.md` | Only when the user asks to fold in production traces |

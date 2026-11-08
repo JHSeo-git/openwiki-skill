@@ -8,11 +8,11 @@ sources:
     resource: repo://skills/mermaid-diagrams/SKILL.md
   - id: openwiki-source-a086a22600cde1e5b60be90f
     resource: repo://skills/openwiki-personal/SKILL.md
-  - id: openwiki-source-f27335ea429d443b8de638e2
-    resource: repo://skills/openwiki/SKILL.md
   - id: openwiki-source-88378f6a3ac54313171799db
     resource: repo://skills/openwiki/references/prompt-page.md
-generated: { by: "claude-code", at: "2026-09-15T01:48:47.000Z" }
+  - id: openwiki-source-f27335ea429d443b8de638e2
+    resource: repo://skills/openwiki/SKILL.md
+generated: { by: "claude-code", at: "2026-11-08T07:59:20.000Z" }
 ---
 
 # OKF output contract
@@ -81,8 +81,8 @@ never advances the stamp. This is why the provenance pass runs **last**, after e
 finalize pass: the index, link, and `sources` passes all edit front matter, and none of
 those edits should look like a content change.
 
-The actor is the producing host — `claude-code`, `codex`, `opencode`, `cursor`, and since
-upstream 0.5.2 also `bob` and `kiro` — where upstream stamps its own version. The set is
+The actor is the producing host — `claude-code`, `codex`, `opencode`, `cursor`, `bob`,
+`kiro`, `omp`, `antigravity`, `copilot`, or `pi` — where upstream stamps its own version. The set is
 upstream's host registry rather than a list this port curates, so it grows with each
 coding-agent integration upstream adds; a wiki may carry an actor this port would never
 write itself. See [the port contract](../architecture/port-contract.md) for why the port
@@ -117,6 +117,11 @@ entries another producer authored alone. Line ranges are reduced to whole-file f
 precise spans stay in the Claim, while OKF provenance exposes source *files*.
 [Claims and grounding](claims-and-grounding.md) covers where the resources come from and
 how the field is read back as a staleness signal.
+
+Projection touches only pages this run produced Claims for. A page whose job was skipped,
+or whose evidence issue a focused update deliberately deferred, keeps its existing
+`sources` exactly as found — projecting an empty set onto it would erase grounding an
+earlier run recorded.
 
 ## Reserved files
 
@@ -157,6 +162,12 @@ proven conformant is removed, never rewritten.** Repairing a malformed `generate
 `verified` into a well-formed one would manufacture provenance the wiki cannot support, so
 the field goes away instead.
 
+Every metadata edit — repair, `sources` projection, provenance — treats a top-level field
+as the whole of it: its blank lines, indented continuations, and, since upstream 0.7.1,
+compact sequence items written at column zero (`sources:` followed by `- resource: …`).
+Replacing or removing such a field takes its entire list, so no orphaned items are left
+behind, while a sibling key such as `-dashed:` that is not a sequence item survives.
+
 Because step 2 preserves the original block outright, upstream's old carry-across lists no
 longer exist. The cost lands on step 3: when a block cannot be parsed at all, the
 `openwiki_translation_pending` marker and the code-owned `generated` / `verified` /
@@ -182,6 +193,11 @@ a no-op run produces no diff.
 Index pages are generated, so a page worker never creates or edits one, and a plan never
 includes one.
 
+The same pass collects two advisory lists (upstream 0.6.1): pages still flagged
+`openwiki_generated: true`, and pages without a usable `description`. Both are reported at
+the end of a run as enrichment hints. Neither fails validation, changes a page, or alters
+the run's status, and neither is a reason to invent a description.
+
 ## Render safety
 
 Two finalize passes keep a page from breaking where it is read:
@@ -196,8 +212,26 @@ Two finalize passes keep a page from breaking where it is read:
   with `openwiki: broken internal link` and the run still succeeds.
 
 Both passes are self-correcting by design: they never fail a run, and the stamped comment
-is the instruction a later run repairs from. Anchors are GitHub-style slugs and are checked
-only on Markdown targets, so a `#L10` line anchor on a source file is never flagged.
+is the instruction a later run repairs from.
+
+Several details of the link pass are easy to get wrong:
+
+- **Hrefs must be relative to the page** (upstream 0.6.1). A root-absolute href such as
+  `/openwiki/x.md` or `/src/x.ts` is flagged before existence is even checked, because no
+  real consumer — an agent reading the page, GitHub's renderer, a local viewer — resolves
+  it against the repository root. `/openwiki/...` paths are lifecycle identifiers, never
+  link destinations. This rule is repository-only; personal wikis keep their root-relative
+  convention.
+- **Code examples are not links** (upstream 0.7.1). Links inside fenced blocks and inline
+  code spans are ignored, though inline code still contributes to heading slugs.
+- **Anchors are GitHub-style slugs**, matching `github-slugger`: whitespace is replaced per
+  character rather than collapsed, Unicode letters, numbers, and combining marks survive,
+  and duplicates get `-1`, `-2` suffixes. A malformed percent escape is compared as written
+  and stamped rather than crashing the pass.
+- **Line anchors are exempt.** Heading anchors are checked only on Markdown targets, and a
+  GitHub line fragment such as `#L10` or `#L10-L20` is skipped even on a Markdown target,
+  provided the link has a path. An anchor-only `#L10` is still checked against the page's
+  own headings.
 
 ## Where this is executed
 
