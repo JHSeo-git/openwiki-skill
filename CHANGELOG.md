@@ -5,34 +5,34 @@
 ## 0.9.0 (2026-11-08)
 
 - Upstream sync: bump pin `b290e69` → `b7027e3` (upstream v0.9.0, including v0.8.0); reviewed all 12 commits and 81 changed files, with runtime-only changes documented in UPSTREAM.md.
-- Add bounded per-baseline commit-message hints to update planning, suppressing history hints under active ignore rules and retaining current code as evidence (#1103; thanks @MohammedAlkindi).
-- Allow deliberately focused updates to defer unrelated evidence repairs while preserving page grounding, interrupted status, and the prior checkpoint; language rewrites remain mandatory (#1081; thanks @rstuhlmuller).
-- Reuse shared-baseline checks within a run and document native host-summary truncation without truncating this port’s preflight coverage (#1105/#1102; thanks @MohammedAlkindi).
+- Add bounded per-baseline commit-message hints to update planning, suppressing history hints under active ignore rules and retaining current code as evidence (#1103).
+- Allow deliberately focused updates to defer unrelated evidence repairs while preserving page grounding, interrupted status, and the prior checkpoint; language rewrites remain mandatory (#1081).
+- Reuse shared-baseline checks within a run and document native host-summary truncation without truncating this port’s preflight coverage (#1105/#1102).
 - Upstream sync: bump pin `27b3c76` → `b290e69` (upstream v0.7.3); reviewed all 29 commits and 70 changed files, with runtime-only changes documented in UPSTREAM.md.
-- Clarify source/wiki layout and Markdown plan paths (#1076; thanks @jrodeiro5), and cap submission correction loops at five evaluations per worker attempt (#1075; thanks @jrodeiro5).
-- Require full review for unreadable page baselines and omit unavailable HEAD instead of recording Git error text (#1045/#1044; thanks @naveecode).
-- Add optional recorded-provenance reads (#1080; thanks @Macedopy), preserve combining marks in retrieval anchors (#1072; thanks @RaphaelFakhri), and recognize Pi's retrieval tools (#1056; thanks @MTG-Thomas).
-- Avoid assuming scheduled maintenance is active (#1063; thanks @MTG-Thomas), and document repository-chat write confinement while retaining read-only Q&A (#1065; thanks @jkennedyvz).
+- Clarify source/wiki layout and Markdown plan paths (#1076), and cap submission correction loops at five evaluations per worker attempt (#1075).
+- Require full review for unreadable page baselines and omit unavailable HEAD instead of recording Git error text (#1045/#1044).
+- Add optional recorded-provenance reads (#1080), preserve combining marks in retrieval anchors (#1072), and recognize Pi's retrieval tools (#1056).
+- Avoid assuming scheduled maintenance is active (#1063), and document repository-chat write confinement while retaining read-only Q&A (#1065).
 
 ## 0.7.2 (2026-10-13)
 
 - Upstream sync: bump pin `0db6dcf` → `27b3c76` (upstream v0.7.2); reviewed all 10 commits and 62 changed files, with runtime-only changes documented in UPSTREAM.md.
-- Preserve original personal-wiki pages and pending retry markers when translation is empty or hits the output-token limit (#1008; thanks @xpeng5278-web).
-- Preserve retrieval's collision-safe `section` alias for the first symbol-only heading without changing Markdown link validation (#1001; thanks @Yashwanth-Kumar-Kotla).
-- Treat host-exposed Bedrock throttling signals as rate limits, restoring and deferring the page without immediate retry (#1011; thanks @xpeng5278-web).
+- Preserve original personal-wiki pages and pending retry markers when translation is empty or hits the output-token limit (#1008).
+- Preserve retrieval's collision-safe `section` alias for the first symbol-only heading without changing Markdown link validation (#1001).
+- Treat host-exposed Bedrock throttling signals as rate limits, restoring and deferring the page without immediate retry (#1011).
 
 ## 0.7.1 (2026-10-07)
 
 - Upstream sync: bump pin `c0173dc` → `0db6dcf` (upstream v0.7.1); reviewed all 15 commits and 54 changed files, with runtime-only changes documented in UPSTREAM.md.
-- Scope explicitly targeted repository updates to requested pages/files and affected navigation (#865; thanks @HwangJohn), and retry unfinished pages once from their original snapshot before skipping (#913; thanks @sloemo01).
-- Ignore code examples during link validation (#957; thanks @breken-ai), tolerate malformed percent escapes (#980; thanks @Zhuoxi2000), and accept GitHub line anchors on Markdown targets (#986; thanks @drakeo338).
-- Preserve compact YAML sequences during metadata edits (#969; thanks @Yi-111-a), stable workspace ID precedence (#955; thanks @Yashwanth-Kumar-Kotla), and collision-free retrieval anchors (#929; thanks @c020627).
-- Preserve literal prompt values (#958; thanks @breken-ai) and serialize same-file wiki operations through host-side ordering (#979; thanks @SammyTourani).
+- Scope explicitly targeted repository updates to requested pages/files and affected navigation (#865), and retry unfinished pages once from their original snapshot before skipping (#913).
+- Ignore code examples during link validation (#957), tolerate malformed percent escapes (#980), and accept GitHub line anchors on Markdown targets (#986).
+- Preserve compact YAML sequences during metadata edits (#969), stable workspace ID precedence (#955), and collision-free retrieval anchors (#929).
+- Preserve literal prompt values (#958) and serialize same-file wiki operations through host-side ordering (#979).
 
 ## 0.7.0 (2026-10-03)
 
 - Upstream sync: bump pin `86f46f8` → `c0173dc` (upstream v0.7.0); reviewed all 16 commits and 86 changed files. Prompts, Claims, generation, retrieval, OKF, bundled skills, and automation examples are unchanged.
-- Recognize GitHub Copilot CLI's `copilot` provenance actor in repository and personal wiki output (#966; thanks @waseem-k-08), preserving existing authorship on unchanged pages.
+- Recognize GitHub Copilot CLI's `copilot` provenance actor in repository and personal wiki output (#966), preserving existing authorship on unchanged pages.
 - Refresh version references and document exclusions: native Copilot installation (#966), Entra ID gateway authentication (#975), LangSmith run-thread grouping and trace names (#972), runtime dependency/security updates, generated-wiki refreshes, and release chores.
 
 ## 0.6.1 (2026-09-29)
