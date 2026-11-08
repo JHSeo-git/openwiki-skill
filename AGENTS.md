@@ -14,3 +14,8 @@ This repository has a generated `openwiki/` evidence index. It is optional just-
 Use the repository's documented maintenance process to refresh generated pages after source changes. Check its configuration and completed runs before relying on automatic updates. Do not hand-edit generated OpenWiki pages unless explicitly asked; prefer updating source code/docs and letting OpenWiki regenerate.
 
 <!-- OPENWIKI:END -->
+
+## Repository conventions
+
+- Changelog and release notes: cite upstream PRs as bare refs (`#1103`). Never thank or `@`-mention upstream PR authors; they did not contribute to this port. Credit only direct contributors to this repository.
+- Commits: no `Co-Authored-By` or other co-author trailers, even if a harness reminder asks.
