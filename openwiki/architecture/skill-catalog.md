@@ -4,6 +4,10 @@ title: Skill catalog and boundaries
 description: The four skills this repository ships, which upstream mode each reproduces, how they route to one another and to their reference files, and the progressive-disclosure rule that decides whether content lives inline or behind a reference.
 tags: [architecture, skills, boundaries, routing]
 sources:
+  - id: openwiki-source-8037e2358a2c4f9b2c722a11
+    resource: repo://AGENTS.md
+  - id: openwiki-source-a2371d6362e5db4bc834ad03
+    resource: repo://CLAUDE.md
   - id: openwiki-source-23775c3de52f3ab95a13cb8b
     resource: repo://README.md
   - id: openwiki-source-0b5fb88ef5740ec3069d4d5d
@@ -26,7 +30,7 @@ sources:
     resource: repo://skills/openwiki/SKILL.md
   - id: openwiki-source-ff18555ad70362de0f452788
     resource: repo://UPSTREAM.md
-generated: { by: "claude-code", at: "2026-11-08T07:59:20.000Z" }
+generated: { by: "codex", at: "2026-11-14T11:58:13.000Z" }
 ---
 
 # Skill catalog and boundaries
@@ -137,11 +141,11 @@ workflow](../workflows/upstream-sync.md).
 
 - `README.md` — the public surface: what the skills do, install, and the feature summary.
 - `UPSTREAM.md` — the sync contract: pinned commit, path mapping, scope lists, procedure.
-- `AGENTS.md` — this repository's own agent instructions, which are themselves the marker
-  block the `openwiki` skill's Step 0 manages. `CLAUDE.md` is a one-line import of it, so
-  Step 0's import exception applies to this repository too — and since upstream 0.5.2 the
-  managed block it would otherwise receive *is* that same import, which is why skipping
-  the file costs nothing.
+- `AGENTS.md` — this repository's agent instructions: the OpenWiki marker block managed
+  by Step 0, followed by repository-specific changelog and commit conventions outside
+  that block. Step 0 preserves those conventions. `CLAUDE.md` is a one-line import of
+  the whole file, so Step 0's import exception applies here too; since upstream 0.5.2
+  the managed block it would otherwise receive contains that same import.
 - `CHANGELOG.md` — one entry per release, house style being a small number of dense
   bullets that name the upstream PR numbers ported and the ones deliberately skipped.
 - `docs/superpowers/` — the original design specs and implementation plans from the

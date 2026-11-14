@@ -4,6 +4,8 @@ title: Upstream sync
 description: How a new upstream release is ported — the pinned commit, the path mapping that decides what is in scope, the six-step procedure, the drift guards, and the failure modes this repository has actually hit and now defends against.
 tags: [workflow, upstream, sync, maintenance, scope]
 sources:
+  - id: openwiki-source-8037e2358a2c4f9b2c722a11
+    resource: repo://AGENTS.md
   - id: openwiki-source-ca6cb4b1a14fd7969dfae3ec
     resource: repo://CHANGELOG.md
   - id: openwiki-source-23775c3de52f3ab95a13cb8b
@@ -16,7 +18,7 @@ sources:
     resource: repo://skills/openwiki/references/prompt-page.md
   - id: openwiki-source-ff18555ad70362de0f452788
     resource: repo://UPSTREAM.md
-generated: { by: "claude-code", at: "2026-11-08T07:59:20.000Z" }
+generated: { by: "codex", at: "2026-11-14T11:58:13.000Z" }
 ---
 
 # Upstream sync
@@ -144,12 +146,17 @@ where upstream's version is narrower than the port's, prefer upstream's.
   file, or exclusion-list entry must disappear everywhere, including permission allowlists
   and reference-file cross-links.
 - The changelog entry names both what was ported and what was deliberately skipped, with
-  upstream PR numbers as bare references, so a later reader can tell a decision from an
-  omission. Its opening bullet records the pin movement and how much of the release was
-  reviewed, and the runtime-only changes it leaves out are listed in `UPSTREAM.md`.
+  upstream PR numbers as bare references such as `#1103`, so a later reader can tell a
+  decision from an omission. Its opening bullet records the pin movement and how much of
+  the release was reviewed, and the runtime-only changes it leaves out are listed in
+  `UPSTREAM.md`. Changelog and release notes credit only direct contributors to this
+  repository; they must not thank or `@`-mention upstream PR authors.
 - Next-sync notes in `UPSTREAM.md` name the release tag they were written against. A note
   is a claim about one tag, not about upstream `main`, so a sync that moves the pin should
   re-read the note and update or retire it.
+
+The repository conventions in [AGENTS.md](../../AGENTS.md) also prohibit
+`Co-Authored-By` and all other co-author trailers in commits, including sync commits.
 
 ## When faithfulness and quality disagree
 

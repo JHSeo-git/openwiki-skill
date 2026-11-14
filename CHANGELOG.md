@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Refresh the repository wiki to distinguish managed OpenWiki setup from repository conventions and document changelog credit and commit trailer rules.
+
 ## 0.9.0 (2026-11-08)
 
 - Upstream sync: bump pin `b290e69` → `b7027e3` (upstream v0.9.0, including v0.8.0); reviewed all 12 commits and 81 changed files, with runtime-only changes documented in UPSTREAM.md.

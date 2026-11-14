@@ -1,8 +1,8 @@
 {
-  "updatedAt": "2026-11-08T08:04:10.000Z",
+  "updatedAt": "2026-11-14T12:02:20.000Z",
   "command": "update",
-  "gitHead": "3cca4ecc1a0c1b32a18bf4e4c2cbf0a5b41ef55a",
-  "model": "claude-opus-5-5",
+  "gitHead": "2995af238e19c7355a88de2b4dafcda375f4d57f",
+  "model": "codex",
   "status": "complete",
   "language": "en"
 }
